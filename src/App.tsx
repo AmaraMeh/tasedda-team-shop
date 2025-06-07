@@ -9,6 +9,9 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Team from "./pages/Team";
 import Seller from "./pages/Seller";
+import TeamSpace from "./pages/TeamSpace";
+import SellerSpace from "./pages/SellerSpace";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +28,9 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/team" element={<Team />} />
           <Route path="/seller" element={<Seller />} />
+          <Route path="/team-space" element={<TeamSpace />} />
+          <Route path="/seller-space" element={<SellerSpace />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

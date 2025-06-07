@@ -40,7 +40,8 @@ const Auth = () => {
         options: {
           data: {
             full_name: fullName,
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
 
@@ -48,7 +49,7 @@ const Auth = () => {
 
       toast({
         title: "Compte créé avec succès !",
-        description: "Vous pouvez maintenant vous connecter.",
+        description: "Vérifiez votre email pour confirmer votre compte, ou contactez l'admin si la confirmation email est désactivée.",
       });
     } catch (error: any) {
       toast({
@@ -78,9 +79,14 @@ const Auth = () => {
         description: "Bienvenue sur Tasedda.",
       });
     } catch (error: any) {
+      let errorMessage = error.message;
+      if (error.message.includes('Email not confirmed')) {
+        errorMessage = "Email non confirmé. Contactez l'administrateur ou vérifiez votre boîte email.";
+      }
+      
       toast({
         title: "Erreur de connexion",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -208,6 +214,16 @@ const Auth = () => {
               </form>
             </TabsContent>
           </Tabs>
+
+          <div className="mt-6 text-center">
+            <Button 
+              variant="link" 
+              onClick={() => navigate('/admin')}
+              className="text-gold/60 hover:text-gold text-xs"
+            >
+              Accès Administrateur
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
