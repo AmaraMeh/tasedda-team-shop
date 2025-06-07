@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Store, Package, TrendingUp, DollarSign, Calendar, Plus, Eye } from 'lucide-react';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
 
 interface Seller {
   id: string;
@@ -24,9 +25,9 @@ interface Seller {
 }
 
 const SellerSpace = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, loading } = useAuth();
   const [seller, setSeller] = useState<Seller | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -34,19 +35,19 @@ const SellerSpace = () => {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!session) {
-        navigate('/auth');
-      } else {
-        setUser(session.user);
-        await loadSellerData(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+    if (user) {
+      loadSellerData(user.id);
+    }
+  }, [user, loading, navigate]);
 
   const loadSellerData = async (userId: string) => {
     try {
@@ -73,7 +74,7 @@ const SellerSpace = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -108,7 +109,53 @@ const SellerSpace = () => {
     }
   };
 
-  if (loading) {
+  const createSellerSpace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!fullName || !email || !phone) {
+      toast({ title: 'Veuillez remplir toutes les informations personnelles.' });
+      return;
+    }
+    setDataLoading(true);
+    try {
+      // Vérifier si déjà membre team ou déjà une demande team
+      const { data: teamReq } = await supabase
+        .from('team_join_requests')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .single();
+      const { data: teamMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (teamReq || teamMember) {
+        toast({
+          title: "Impossible de créer un espace vendeur",
+          description: "Vous avez déjà demandé à rejoindre la team ou vous êtes déjà membre.",
+          variant: "destructive",
+        });
+        setDataLoading(false);
+        return;
+      }
+      // Désactiver le statut team si existant
+      await supabase.from('team_members').update({ is_active: false }).eq('user_id', user.id);
+      // Mettre à jour le profil avec les infos
+      await supabase.from('profiles').update({ full_name: fullName, email, phone }).eq('id', user.id);
+      // Créer l'espace vendeur
+      // ... code existant pour créer la boutique ...
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>

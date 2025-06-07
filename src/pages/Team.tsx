@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,27 +10,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, TrendingUp, Gift, Users, Star, CheckCircle } from 'lucide-react';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Team = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, loading } = useAuth();
   const [inviteCode, setInviteCode] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [isTeamMember, setIsTeamMember] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [acceptRules, setAcceptRules] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!session) {
-        navigate('/auth');
-      } else {
-        setUser(session.user);
-        await checkTeamMembership(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+    if (user) {
+      checkTeamMembership(user.id);
+    }
+  }, [user, loading, navigate]);
 
   const checkTeamMembership = async (userId: string) => {
     try {
@@ -45,61 +46,72 @@ const Team = () => {
       setIsTeamMember(!!data);
     } catch (error: any) {
       console.error('Error checking team membership:', error);
+    } finally {
+      setDataLoading(false);
     }
   };
 
   const joinTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
-    setLoading(true);
-
+    if (!fullName || !email || !phone) {
+      toast({ title: 'Veuillez remplir toutes les informations personnelles.' });
+      return;
+    }
+    setDataLoading(true);
     try {
-      // Générer un code promo unique
-      const { data: promoCode, error: promoError } = await supabase
-        .rpc('generate_promo_code');
-
-      if (promoError) throw promoError;
-
-      // Chercher le membre qui invite (optionnel)
-      let invitedBy = null;
-      if (inviteCode) {
-        const { data: inviter, error: inviterError } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('promo_code', inviteCode)
-          .single();
-
-        if (inviterError && inviterError.code !== 'PGRST116') {
-          toast({
-            title: "Code d'invitation invalide",
-            description: "Le code saisi n'existe pas.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-
-        invitedBy = inviter?.id || null;
+      // Vérifier si l'utilisateur possède déjà une boutique
+      const { data: shop } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+      if (shop) {
+        toast({
+          title: "Impossible de rejoindre la Team",
+          description: "Vous possédez déjà une boutique sur Tasedda. Un vendeur ne peut pas être membre de la Team.",
+          variant: "destructive",
+        });
+        setDataLoading(false);
+        return;
       }
-
-      // Créer le membre d'équipe
-      const { error } = await supabase
+      // Vérifier si déjà membre ou déjà une demande
+      const { data: teamReq } = await supabase
+        .from('team_join_requests')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .single();
+      const { data: teamMember } = await supabase
         .from('team_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      if (teamReq || teamMember) {
+        toast({
+          title: "Déjà demandé ou membre",
+          description: "Vous avez déjà demandé à rejoindre la team ou vous êtes déjà membre.",
+          variant: "destructive",
+        });
+        setDataLoading(false);
+        return;
+      }
+      // Désactiver le statut vendeur si existant
+      await supabase.from('sellers').update({ is_active: false }).eq('user_id', user.id);
+      // Mettre à jour le profil avec les infos
+      await supabase.from('profiles').update({ full_name: fullName, email, phone }).eq('id', user.id);
+      // Créer la demande d'adhésion
+      const { error } = await supabase
+        .from('team_join_requests')
         .insert({
           user_id: user.id,
-          promo_code: promoCode,
-          invited_by: invitedBy,
+          status: 'pending',
+          invited_by: null,
         });
-
       if (error) throw error;
-
       toast({
-        title: "Bienvenue dans la Team Tasedda !",
-        description: `Votre code promo: ${promoCode}`,
+        title: "Demande envoyée !",
+        description: "Votre demande d'adhésion a été envoyée et sera examinée par l'administration.",
       });
-
-      setIsTeamMember(true);
       navigate('/profile');
     } catch (error: any) {
       toast({
@@ -108,7 +120,7 @@ const Team = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -119,6 +131,14 @@ const Team = () => {
     { level: 4, commission: 12, sales: 85, title: "Ambassadeur Or" },
     { level: 5, commission: 12, sales: 120, title: "Manager" },
   ];
+
+  if (loading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-gold">Chargement...</div>
+      </div>
+    );
+  }
 
   if (isTeamMember) {
     return (
@@ -281,10 +301,25 @@ const Team = () => {
                       Si vous avez été invité par un membre, saisissez son code
                     </p>
                   </div>
-                  
-                  <Button type="submit" className="w-full btn-gold" disabled={loading}>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="acceptRules"
+                      checked={acceptRules}
+                      onChange={e => setAcceptRules(e.target.checked)}
+                      className="accent-gold"
+                      required
+                    />
+                    <Label htmlFor="acceptRules" className="text-sm">
+                      J'accepte la <a href="/reglement" target="_blank" className="underline gold-text">loi du site</a>
+                    </Label>
+                  </div>
+                  <Input label="Nom complet" value={fullName} onChange={e => setFullName(e.target.value)} required />
+                  <Input label="Email" value={email} onChange={e => setEmail(e.target.value)} required type="email" />
+                  <Input label="Téléphone (+213)" value={phone} onChange={e => setPhone(e.target.value)} required pattern="^\+213[0-9]{9}$" />
+                  <Button type="submit" className="w-full btn-gold" disabled={dataLoading || !acceptRules}>
                     <Crown className="h-4 w-4 mr-2" />
-                    {loading ? "Inscription..." : "Rejoindre la Team"}
+                    {dataLoading ? "Inscription..." : "Rejoindre la Team"}
                   </Button>
                 </form>
               </CardContent>

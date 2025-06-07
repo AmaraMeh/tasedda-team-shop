@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
@@ -8,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Zap, Gift, Users, TrendingUp, Star, Shield } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock data pour les produits
 const featuredProducts = [
@@ -52,7 +54,26 @@ const featuredProducts = [
 ];
 
 const Index = () => {
+  const { user, loading } = useAuth();
   const [scrollY, setScrollY] = useState(0);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      // Vérifier si l'utilisateur est admin
+      const checkAdmin = async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+        if (data?.is_admin) {
+          navigate('/admin');
+        }
+      };
+      checkAdmin();
+    }
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);

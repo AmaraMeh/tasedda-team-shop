@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,14 +8,40 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Users, Store, Package, TrendingUp, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Eye, CheckCircle, XCircle, Check, X, Crown, ShoppingBag, DollarSign, AlertCircle, RefreshCw } from 'lucide-react';
+import type { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
+import Dashboard from './admin/Dashboard';
+import TeamRequests from './admin/TeamRequests';
+import TeamMembers from './admin/TeamMembers';
+import Sellers from './admin/Sellers';
+import Orders from './admin/Orders';
+import Products from './admin/Products';
+import Withdrawals from './admin/Withdrawals';
+import Primes from './admin/Primes';
+import Users from './admin/Users';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 const ADMIN_PASSWORD = 'AdminTasedda20252025';
 
+interface TeamJoinRequest {
+  id: string;
+  user_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  admin_notes: string | null;
+  invited_by: string | null;
+  profiles: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
+}
+
 const Admin = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { user, loading } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalTeamMembers: 0,
@@ -25,31 +50,50 @@ const Admin = () => {
     totalOrders: 0
   });
   const [users, setUsers] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [sellers, setSellers] = useState([]);
+  const [joinRequests, setJoinRequests] = useState<TeamJoinRequest[]>([]);
+  const [tab, setTab] = useState('dashboard');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [selectedRequest, setSelectedRequest] = useState<TeamJoinRequest | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      loadDashboardData();
-      toast({
-        title: "Connexion admin réussie",
-        description: "Bienvenue dans le panel administrateur",
-      });
-    } else {
-      toast({
-        title: "Erreur d'authentification",
-        description: "Mot de passe incorrect",
-        variant: "destructive",
-      });
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+    if (user) {
+      checkAdminStatus(user.id);
+    }
+  }, [user, loading, navigate]);
+
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      if (!data?.is_admin) {
+        navigate('/');
+      } else {
+        setIsAdmin(true);
+        loadDashboardData();
+        loadTeamData();
+        loadJoinRequests();
+      }
+    } catch (error: any) {
+      console.error('Error checking admin status:', error);
+      navigate('/');
     }
   };
 
   const loadDashboardData = async () => {
-    setLoading(true);
+    setDataLoading(true);
     try {
       // Charger les statistiques
       const [profilesRes, teamRes, sellersRes, productsRes, ordersRes] = await Promise.all([
@@ -74,55 +118,107 @@ const Admin = () => {
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
-  if (!isAuthenticated) {
+  const loadTeamData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTeamMembers(data || []);
+    } catch (error: any) {
+      console.error('Error loading team data:', error);
+    }
+  };
+
+  const loadJoinRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_join_requests')
+        .select(`
+          *,
+          profiles:profiles!team_join_requests_user_id_fkey (
+            full_name,
+            email,
+            phone
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setJoinRequests(data || []);
+    } catch (error: any) {
+      console.error('Error loading join requests:', error);
+    }
+  };
+
+  const handleJoinRequest = async (requestId: string, status: 'approved' | 'rejected') => {
+    try {
+      const request = joinRequests.find(r => r.id === requestId);
+      if (!request) return;
+
+      if (status === 'approved') {
+        // Générer un code promo unique
+        const { data: promoCode, error: promoError } = await supabase
+          .rpc('generate_promo_code');
+
+        if (promoError) throw promoError;
+
+        // Créer le membre d'équipe
+        const { error: memberError } = await supabase
+          .from('team_members')
+          .insert({
+            user_id: request.user_id,
+            promo_code: promoCode,
+            invited_by: request.invited_by,
+            rank: 1,
+            total_sales: 0,
+            total_commissions: 0,
+            available_commissions: 0,
+            is_active: true
+          });
+
+        if (memberError) throw memberError;
+      }
+
+      // Mettre à jour le statut de la demande
+      const { error } = await supabase
+        .from('team_join_requests')
+        .update({
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: status === 'approved' ? "Demande approuvée" : "Demande rejetée",
+        description: status === 'approved' 
+          ? "Le nouveau membre a été ajouté à l'équipe."
+          : "La demande a été rejetée.",
+      });
+
+      await loadJoinRequests();
+      await loadTeamData();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading || dataLoading || !isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black"></div>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23FFD700%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
-        
-        <Card className="w-full max-w-md glass-effect border-gold/20" data-aos="fade-up">
-          <CardHeader className="text-center">
-            <Shield className="h-16 w-16 mx-auto mb-4 text-gold" />
-            <CardTitle className="text-2xl font-display gold-text">
-              Admin Panel
-            </CardTitle>
-            <p className="text-muted-foreground">
-              Accès réservé aux administrateurs
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe administrateur</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-black/50 border-gold/20 focus:border-gold"
-                  placeholder="Entrez le mot de passe admin"
-                />
-              </div>
-              <Button type="submit" className="w-full btn-gold">
-                <Shield className="h-4 w-4 mr-2" />
-                Se connecter
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => navigate('/')}
-                className="w-full border-gold/20 text-gold hover:bg-gold/10"
-              >
-                Retour à l'accueil
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
       </div>
     );
   }
@@ -146,217 +242,93 @@ const Admin = () => {
               >
                 Retour au site
               </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => setIsAuthenticated(false)}
-              >
-                Déconnexion
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Utilisateurs</p>
-                  <p className="text-2xl font-bold gold-text">{stats.totalUsers}</p>
-                </div>
-                <Users className="h-8 w-8 text-gold" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Team Members</p>
-                  <p className="text-2xl font-bold gold-text">{stats.totalTeamMembers}</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-gold" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Vendeurs</p>
-                  <p className="text-2xl font-bold gold-text">{stats.totalSellers}</p>
-                </div>
-                <Store className="h-8 w-8 text-gold" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Produits</p>
-                  <p className="text-2xl font-bold gold-text">{stats.totalProducts}</p>
-                </div>
-                <Package className="h-8 w-8 text-gold" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Commandes</p>
-                  <p className="text-2xl font-bold gold-text">{stats.totalOrders}</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-gold" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-display font-bold">
+            <span className="gold-text">Admin</span> Panel
+          </h1>
+          <Button onClick={() => {
+            loadDashboardData();
+            loadTeamData();
+            loadJoinRequests();
+            toast({ title: "Données rafraîchies" });
+          }} className="btn-gold">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Rafraîchir
+          </Button>
         </div>
-
-        {/* Gestion */}
-        <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6 bg-black/50">
-            <TabsTrigger value="users" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-              Utilisateurs
-            </TabsTrigger>
-            <TabsTrigger value="team" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-              Team Members
-            </TabsTrigger>
-            <TabsTrigger value="sellers" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-              Vendeurs
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-              Paramètres
-            </TabsTrigger>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="grid grid-cols-9">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="team-requests">Demandes Team</TabsTrigger>
+            <TabsTrigger value="team-members">Membres Team</TabsTrigger>
+            <TabsTrigger value="sellers">Boutiques</TabsTrigger>
+            <TabsTrigger value="orders">Commandes</TabsTrigger>
+            <TabsTrigger value="products">Produits</TabsTrigger>
+            <TabsTrigger value="withdrawals">Retraits</TabsTrigger>
+            <TabsTrigger value="primes">Primes</TabsTrigger>
+            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users">
-            <Card className="glass-effect border-gold/20">
-              <CardHeader>
-                <CardTitle>Gestion des Utilisateurs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {users.map((user: any) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 bg-black/30 rounded-lg border border-gold/10">
-                      <div>
-                        <p className="font-medium">{user.full_name || 'Nom non défini'}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Créé le: {new Date(user.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">Actif</Badge>
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+          <TabsContent value="dashboard"><Dashboard /></TabsContent>
+          <TabsContent value="team-requests">
+            {joinRequests.map(r => (
+              <div key={r.id} className="bg-black/40 p-4 rounded flex justify-between items-center mb-2">
+                <div>
+                  <div className="font-bold">{r.profiles?.full_name}</div>
+                  <div className="text-xs text-muted-foreground">{r.profiles?.email}</div>
+                  <div className="text-xs">Demandé le : {new Date(r.created_at).toLocaleDateString()}</div>
+                  <div className="text-xs">Statut : {r.status}</div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="team">
-            <Card className="glass-effect border-gold/20">
-              <CardHeader>
-                <CardTitle>Gestion Team Members</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {teamMembers.map((member: any) => (
-                    <div key={member.id} className="flex items-center justify-between p-4 bg-black/30 rounded-lg border border-gold/10">
-                      <div>
-                        <p className="font-medium">Code Promo: {member.promo_code}</p>
-                        <p className="text-sm text-muted-foreground">Rang: {member.rank}</p>
-                        <p className="text-sm text-muted-foreground">Ventes: {member.total_sales}</p>
-                        <p className="text-sm text-gold">Commissions: {member.total_commissions} DA</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={member.is_active ? "default" : "secondary"}>
-                          {member.is_active ? "Actif" : "Inactif"}
-                        </Badge>
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="sellers">
-            <Card className="glass-effect border-gold/20">
-              <CardHeader>
-                <CardTitle>Gestion des Vendeurs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sellers.map((seller: any) => (
-                    <div key={seller.id} className="flex items-center justify-between p-4 bg-black/30 rounded-lg border border-gold/10">
-                      <div>
-                        <p className="font-medium">{seller.business_name}</p>
-                        <p className="text-sm text-muted-foreground">Slug: /{seller.slug}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Statut: {seller.subscription_status}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Expire le: {new Date(seller.subscription_expires_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={seller.is_active ? "default" : "secondary"}>
-                          {seller.is_active ? "Actif" : "Inactif"}
-                        </Badge>
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <Card className="glass-effect border-gold/20">
-              <CardHeader>
-                <CardTitle>Paramètres Système</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <h3 className="font-semibold text-amber-400 mb-2">Configuration Supabase</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Pour corriger l'erreur "Email not confirmed", allez dans votre dashboard Supabase :
-                    </p>
-                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                      <li>Authentication → Settings</li>
-                      <li>Désactivez "Enable email confirmations"</li>
-                      <li>Sauvegardez les modifications</li>
-                    </ol>
-                  </div>
-                  
-                  <Button onClick={loadDashboardData} className="btn-gold">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Actualiser les données
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(r); setModalOpen(true); }}>
+                    <Eye className="w-4 h-4 mr-1" /> Voir
                   </Button>
+                  {r.status === 'pending' && (
+                    <>
+                      <Button size="sm" className="bg-green-600 text-white" onClick={() => handleJoinRequest(r.id, 'approved')}>
+                        <Check className="w-4 h-4 mr-1" /> Accepter
+                      </Button>
+                      <Button size="sm" className="bg-red-600 text-white" onClick={() => handleJoinRequest(r.id, 'rejected')}>
+                        <X className="w-4 h-4 mr-1" /> Refuser
+                      </Button>
+                    </>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            ))}
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent>
+                <DialogTitle>Détail de la demande</DialogTitle>
+                {selectedRequest && (
+                  <div className="space-y-2">
+                    <div><b>Nom :</b> {selectedRequest.profiles?.full_name}</div>
+                    <div><b>Email :</b> {selectedRequest.profiles?.email}</div>
+                    <div><b>Téléphone :</b> {selectedRequest.profiles?.phone}</div>
+                    <div><b>Statut :</b> {selectedRequest.status}</div>
+                    <div><b>Date :</b> {new Date(selectedRequest.created_at).toLocaleDateString()}</div>
+                    <div><b>Notes admin :</b> {selectedRequest.admin_notes || '-'}</div>
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end mt-4">
+                  <Button variant="outline" onClick={() => setModalOpen(false)}>Fermer</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+          <TabsContent value="team-members"><TeamMembers /></TabsContent>
+          <TabsContent value="sellers"><Sellers /></TabsContent>
+          <TabsContent value="orders"><Orders /></TabsContent>
+          <TabsContent value="products"><Products /></TabsContent>
+          <TabsContent value="withdrawals"><Withdrawals /></TabsContent>
+          <TabsContent value="primes"><Primes /></TabsContent>
+          <TabsContent value="users">
+            <Users users={users} />
           </TabsContent>
         </Tabs>
       </main>

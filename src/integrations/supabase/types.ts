@@ -397,6 +397,107 @@ export type Database = {
           },
         ]
       }
+      team_join_requests: {
+        Row: {
+          id: string
+          user_id: string
+          status: 'pending' | 'approved' | 'rejected'
+          created_at: string
+          updated_at: string | null
+          admin_notes: string | null
+          invited_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+          updated_at?: string | null
+          admin_notes?: string | null
+          invited_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          created_at?: string
+          updated_at?: string | null
+          admin_notes?: string | null
+          invited_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_join_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_requests_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      shops: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          slug: string
+          description: string | null
+          logo_url: string | null
+          cover_url: string | null
+          is_active: boolean
+          subscription_status: 'trial' | 'active' | 'expired'
+          trial_end_date: string | null
+          subscription_end_date: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          slug: string
+          description?: string | null
+          logo_url?: string | null
+          cover_url?: string | null
+          is_active?: boolean
+          subscription_status?: 'trial' | 'active' | 'expired'
+          trial_end_date?: string | null
+          subscription_end_date?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          logo_url?: string | null
+          cover_url?: string | null
+          is_active?: boolean
+          subscription_status?: 'trial' | 'active' | 'expired'
+          trial_end_date?: string | null
+          subscription_end_date?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shops_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       withdrawal_requests: {
         Row: {
           admin_notes: string | null

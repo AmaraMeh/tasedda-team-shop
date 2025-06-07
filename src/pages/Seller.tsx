@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,28 +11,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Store, Shield, Users, TrendingUp, CheckCircle } from 'lucide-react';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Seller = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, loading } = useAuth();
   const [businessName, setBusinessName] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [isSeller, setIsSeller] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!session) {
-        navigate('/auth');
-      } else {
-        setUser(session.user);
-        await checkSellerStatus(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+    if (user) {
+      checkSellerStatus(user.id);
+    }
+  }, [user, loading, navigate]);
 
   const checkSellerStatus = async (userId: string) => {
     try {
@@ -47,6 +44,8 @@ const Seller = () => {
       setIsSeller(!!data);
     } catch (error: any) {
       console.error('Error checking seller status:', error);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -62,8 +61,6 @@ const Seller = () => {
   const createSeller = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
-    setLoading(true);
 
     try {
       const slug = createSlug(businessName);
@@ -81,7 +78,6 @@ const Seller = () => {
           description: "Veuillez choisir un autre nom pour votre boutique.",
           variant: "destructive",
         });
-        setLoading(false);
         return;
       }
 
@@ -109,8 +105,6 @@ const Seller = () => {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -131,6 +125,14 @@ const Seller = () => {
       description: "Tarif abordable après la période d'essai gratuite"
     }
   ];
+
+  if (loading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-gold">Chargement...</div>
+      </div>
+    );
+  }
 
   if (isSeller) {
     return (

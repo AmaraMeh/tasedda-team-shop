@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,26 +6,22 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { User, LogOut, ShoppingBag, Menu, X, Crown, Store, Shield } from 'lucide-react';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, loading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userType, setUserType] = useState<'team' | 'seller' | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await checkUserType(session.user.id);
-      } else {
-        setUserType(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    if (!loading && user) {
+      checkUserType(user.id);
+    } else if (!loading && !user) {
+      setUserType(null);
+    }
+  }, [user, loading]);
 
   const checkUserType = async (userId: string) => {
     try {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { User, LogOut, Settings, Package, Crown } from 'lucide-react';
 import type { User as AuthUser } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Profile {
   id: string;
@@ -32,26 +32,46 @@ interface TeamMember {
 }
 
 const Profile = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, loading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [promoStats, setPromoStats] = useState<{used: number, pending: number}>({used: 0, pending: 0});
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate('/auth');
-      } else {
-        setUser(session.user);
-        fetchProfile(session.user.id);
-        fetchTeamMember(session.user.id);
-      }
-    });
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+    if (user) {
+      fetchProfile(user.id);
+      fetchTeamMember(user.id);
+    }
+  }, [user, loading, navigate]);
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  useEffect(() => {
+    if (teamMember) {
+      // Statistiques sur le code promo
+      const fetchPromoStats = async () => {
+        // Nombre de personnes ayant utilisé le code promo et validées
+        const { count: used } = await supabase
+          .from('team_members')
+          .select('id', { count: 'exact', head: true })
+          .eq('invited_by', teamMember.id)
+          .eq('is_active', true);
+        // Nombre de personnes en attente de validation
+        const { count: pending } = await supabase
+          .from('team_join_requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('invited_by', teamMember.id)
+          .eq('status', 'pending');
+        setPromoStats({ used: used || 0, pending: pending || 0 });
+      };
+      fetchPromoStats();
+    }
+  }, [teamMember]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -66,7 +86,7 @@ const Profile = () => {
     } catch (error: any) {
       console.error('Error fetching profile:', error);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -150,7 +170,7 @@ const Profile = () => {
     }
   };
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-gold">Chargement...</div>
@@ -283,6 +303,22 @@ const Profile = () => {
                         <span>Commissions disponibles:</span>
                         <span className="font-bold text-green-500">{teamMember.available_commissions} DA</span>
                       </div>
+                      {teamMember && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span>Personnes ayant utilisé mon code :</span>
+                            <span className="font-bold text-gold">{promoStats.used}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>En attente de validation :</span>
+                            <span className="font-bold text-yellow-500">{promoStats.pending}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Mes cotisations :</span>
+                            <span className="font-bold text-green-500">{teamMember.total_commissions} DA</span>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
