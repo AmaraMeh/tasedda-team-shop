@@ -3,55 +3,59 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tasedda Design System - Thème Noir et Or */
+/* Import AOS CSS */
+@import 'aos/dist/aos.css';
+
+/* Tasedda Design System - Thème Noir Mat et Or */
 
 @layer base {
   :root {
-    --background: 15 15 15; /* Noir profond */
+    --background: 8 8 8; /* Noir mat très profond */
     --foreground: 250 250 250; /* Blanc cassé */
 
-    --card: 20 20 20; /* Noir card */
+    --card: 12 12 12; /* Noir mat card */
     --card-foreground: 250 250 250;
 
-    --popover: 20 20 20;
+    --popover: 12 12 12;
     --popover-foreground: 250 250 250;
 
     --primary: 45 100% 51%; /* Or brillant */
-    --primary-foreground: 15 15 15;
+    --primary-foreground: 8 8 8;
 
-    --secondary: 30 30 30; /* Gris foncé */
+    --secondary: 18 18 18; /* Gris très foncé */
     --secondary-foreground: 250 250 250;
 
-    --muted: 25 25 25;
+    --muted: 15 15 15;
     --muted-foreground: 163 163 163;
 
     --accent: 45 100% 51%; /* Or */
-    --accent-foreground: 15 15 15;
+    --accent-foreground: 8 8 8;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 250 250 250;
 
-    --border: 45 45 45;
-    --input: 35 35 35;
+    --border: 28 28 28;
+    --input: 20 20 20;
     --ring: 45 100% 51%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 15 15 15;
+    --sidebar-background: 8 8 8;
     --sidebar-foreground: 250 250 250;
     --sidebar-primary: 45 100% 51%;
-    --sidebar-primary-foreground: 15 15 15;
-    --sidebar-accent: 25 25 25;
+    --sidebar-primary-foreground: 8 8 8;
+    --sidebar-accent: 15 15 15;
     --sidebar-accent-foreground: 250 250 250;
-    --sidebar-border: 45 45 45;
+    --sidebar-border: 28 28 28;
     --sidebar-ring: 45 100% 51%;
 
     /* Couleurs personnalisées Tasedda */
     --gold: 45 100% 51%;
     --gold-light: 48 100% 65%;
     --gold-dark: 42 100% 40%;
-    --black-deep: 15 15 15;
-    --black-soft: 25 25 25;
+    --black-deep: 8 8 8;
+    --black-soft: 15 15 15;
+    --black-lighter: 20 20 20;
   }
 }
 
@@ -61,8 +65,9 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    background: linear-gradient(135deg, hsl(var(--black-deep)) 0%, hsl(var(--black-soft)) 100%);
+    @apply bg-black text-foreground font-sans;
+    background: linear-gradient(135deg, hsl(var(--black-deep)) 0%, hsl(var(--black-soft)) 50%, hsl(var(--black-deep)) 100%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -72,32 +77,85 @@
 
 @layer components {
   .gold-gradient {
-    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-light)) 100%);
+    background: linear-gradient(135deg, hsl(var(--gold-dark)) 0%, hsl(var(--gold)) 50%, hsl(var(--gold-light)) 100%);
   }
   
   .gold-text {
-    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-light)) 100%);
+    background: linear-gradient(135deg, hsl(var(--gold-dark)) 0%, hsl(var(--gold)) 50%, hsl(var(--gold-light)) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .card-hover {
-    @apply transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20;
+    @apply transition-all duration-500 hover:scale-105 hover:shadow-2xl;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
   }
 
   .btn-gold {
-    @apply bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-black font-semibold px-6 py-3 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-500/30;
+    @apply relative overflow-hidden font-semibold px-8 py-4 rounded-lg transition-all duration-300 hover:scale-105;
+    background: linear-gradient(135deg, hsl(var(--gold-dark)) 0%, hsl(var(--gold)) 50%, hsl(var(--gold-light)) 100%);
+    color: hsl(var(--black-deep));
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
   }
 
-  .scroll-fade-in {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.6s ease-out;
+  .btn-gold:hover {
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
   }
 
-  .scroll-fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
+  .btn-gold::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
   }
+
+  .btn-gold:hover::before {
+    left: 100%;
+  }
+
+  .glass-effect {
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.1);
+  }
+
+  .gradient-border {
+    position: relative;
+    padding: 2px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold-light)));
+  }
+
+  .gradient-border-inner {
+    background: hsl(var(--black-deep));
+    border-radius: 10px;
+    padding: 1.5rem;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--black-deep));
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, hsl(var(--gold-dark)), hsl(var(--gold-light)));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, hsl(var(--gold)), hsl(var(--gold-light)));
 }

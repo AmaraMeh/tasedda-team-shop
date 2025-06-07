@@ -60,25 +60,8 @@ const Index = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Animation au scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    document.querySelectorAll('.scroll-fade-in').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       <Header />
       
       <main>
@@ -86,10 +69,10 @@ const Index = () => {
         <HeroSection />
 
         {/* Section Produits Vedettes */}
-        <section className="py-20 bg-card/30">
+        <section className="py-20 bg-black/90">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16 scroll-fade-in">
-              <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
+            <div className="text-center mb-16" data-aos="fade-up">
+              <Badge className="bg-gold/10 text-gold border-gold/20 mb-4">
                 ⭐ Sélection Premium
               </Badge>
               <h2 className="text-3xl lg:text-4xl font-display font-bold mb-4">
@@ -100,13 +83,13 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 scroll-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" data-aos="fade-up" data-aos-delay="100">
               {featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
 
-            <div className="text-center mt-12">
+            <div className="text-center mt-12" data-aos="fade-up" data-aos-delay="200">
               <Button size="lg" className="btn-gold">
                 Voir Tous les Produits
               </Button>
@@ -115,10 +98,11 @@ const Index = () => {
         </section>
 
         {/* Section Team Avantages */}
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16 scroll-fade-in">
-              <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
+        <section className="py-20 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-gold/5 to-transparent"></div>
+          <div className="container mx-auto px-4 relative">
+            <div className="text-center mb-16" data-aos="fade-up">
+              <Badge className="bg-gold/10 text-gold border-gold/20 mb-4">
                 🚀 Team Tasedda
               </Badge>
               <h2 className="text-3xl lg:text-4xl font-display font-bold mb-4">
@@ -129,12 +113,12 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 scroll-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* Commission */}
-              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-300 card-hover">
+              <Card className="glass-effect border-gold/20 card-hover" data-aos="fade-up" data-aos-delay="100">
                 <CardHeader className="text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="h-8 w-8 text-primary" />
+                  <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="h-8 w-8 text-gold" />
                   </div>
                   <CardTitle className="text-xl">Commissions Évolutives</CardTitle>
                 </CardHeader>
@@ -149,17 +133,17 @@ const Index = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Rang 5</span>
-                      <Badge className="bg-primary text-primary-foreground">12%</Badge>
+                      <Badge className="bg-gold text-black">12%</Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Parrainage */}
-              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-300 card-hover">
+              <Card className="glass-effect border-gold/20 card-hover" data-aos="fade-up" data-aos-delay="200">
                 <CardHeader className="text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Gift className="h-8 w-8 text-primary" />
+                  <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Gift className="h-8 w-8 text-gold" />
                   </div>
                   <CardTitle className="text-xl">Prime de Parrainage</CardTitle>
                 </CardHeader>
@@ -168,17 +152,17 @@ const Index = () => {
                     Invitez des amis et recevez 300 DA pour chaque filleul actif
                   </p>
                   <div className="text-center">
-                    <span className="text-3xl font-bold text-primary">300 DA</span>
+                    <span className="text-3xl font-bold text-gold">300 DA</span>
                     <p className="text-sm text-muted-foreground">par parrainage réussi</p>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Communauté */}
-              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-300 card-hover">
+              <Card className="glass-effect border-gold/20 card-hover" data-aos="fade-up" data-aos-delay="300">
                 <CardHeader className="text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-8 w-8 text-primary" />
+                  <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-gold" />
                   </div>
                   <CardTitle className="text-xl">Communauté Active</CardTitle>
                 </CardHeader>
@@ -187,14 +171,14 @@ const Index = () => {
                     Rejoignez plus de 500 membres actifs et partagez vos succès
                   </p>
                   <div className="flex items-center justify-center space-x-2">
-                    <Star className="h-5 w-5 text-primary fill-current" />
+                    <Star className="h-5 w-5 text-gold fill-current" />
                     <span className="font-semibold">Support Premium 24/7</span>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="text-center mt-12">
+            <div className="text-center mt-12" data-aos="fade-up" data-aos-delay="400">
               <Button size="lg" className="btn-gold">
                 <Zap className="h-5 w-5 mr-2" />
                 Rejoindre la Team Maintenant
@@ -204,10 +188,10 @@ const Index = () => {
         </section>
 
         {/* Section Vendeurs */}
-        <section className="py-20 bg-card/30">
+        <section className="py-20 bg-black/90">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center scroll-fade-in">
-              <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
+            <div className="max-w-4xl mx-auto text-center" data-aos="fade-up">
+              <Badge className="bg-gold/10 text-gold border-gold/20 mb-4">
                 🏪 Espace Vendeurs
               </Badge>
               <h2 className="text-3xl lg:text-4xl font-display font-bold mb-6">
@@ -217,23 +201,23 @@ const Index = () => {
                 Développez votre business depuis chez vous avec notre plateforme vendeurs
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div className="bg-background/50 backdrop-blur rounded-lg p-6 border border-border">
-                  <Shield className="h-12 w-12 text-primary mx-auto mb-4" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12" data-aos="fade-up" data-aos-delay="100">
+                <div className="glass-effect rounded-lg p-6 border border-gold/20">
+                  <Shield className="h-12 w-12 text-gold mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">1 Mois Gratuit</h3>
                   <p className="text-sm text-muted-foreground">
                     Testez notre plateforme sans engagement
                   </p>
                 </div>
-                <div className="bg-background/50 backdrop-blur rounded-lg p-6 border border-border">
-                  <Users className="h-12 w-12 text-primary mx-auto mb-4" />
+                <div className="glass-effect rounded-lg p-6 border border-gold/20">
+                  <Users className="h-12 w-12 text-gold mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">Support Dédié</h3>
                   <p className="text-sm text-muted-foreground">
                     Accompagnement personnalisé pour votre réussite
                   </p>
                 </div>
-                <div className="bg-background/50 backdrop-blur rounded-lg p-6 border border-border">
-                  <TrendingUp className="h-12 w-12 text-primary mx-auto mb-4" />
+                <div className="glass-effect rounded-lg p-6 border border-gold/20">
+                  <TrendingUp className="h-12 w-12 text-gold mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">700 DA/mois</h3>
                   <p className="text-sm text-muted-foreground">
                     Tarif abordable pour développer votre business
@@ -241,7 +225,7 @@ const Index = () => {
                 </div>
               </div>
 
-              <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+              <Button size="lg" variant="outline" className="border-gold text-gold hover:bg-gold hover:text-black" data-aos="fade-up" data-aos-delay="200">
                 Créer Ma Boutique
               </Button>
             </div>
