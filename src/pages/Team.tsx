@@ -20,9 +20,6 @@ const Team = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [acceptRules, setAcceptRules] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -54,10 +51,6 @@ const Team = () => {
   const joinTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!fullName || !email || !phone) {
-      toast({ title: 'Veuillez remplir toutes les informations personnelles.' });
-      return;
-    }
     setDataLoading(true);
     try {
       // Vérifier si l'utilisateur possède déjà une boutique
@@ -98,7 +91,7 @@ const Team = () => {
       // Désactiver le statut vendeur si existant
       await supabase.from('sellers').update({ is_active: false }).eq('user_id', user.id);
       // Mettre à jour le profil avec les infos
-      await supabase.from('profiles').update({ full_name: fullName, email, phone }).eq('id', user.id);
+      await supabase.from('profiles').update({ full_name: user.user_metadata.full_name, email: user.user_metadata.email, phone: user.user_metadata.phone }).eq('id', user.id);
       // Créer la demande d'adhésion
       const { error } = await supabase
         .from('team_join_requests')
@@ -314,9 +307,6 @@ const Team = () => {
                       J'accepte la <a href="/reglement" target="_blank" className="underline gold-text">loi du site</a>
                     </Label>
                   </div>
-                  <Input label="Nom complet" value={fullName} onChange={e => setFullName(e.target.value)} required />
-                  <Input label="Email" value={email} onChange={e => setEmail(e.target.value)} required type="email" />
-                  <Input label="Téléphone (+213)" value={phone} onChange={e => setPhone(e.target.value)} required pattern="^\+213[0-9]{9}$" />
                   <Button type="submit" className="w-full btn-gold" disabled={dataLoading || !acceptRules}>
                     <Crown className="h-4 w-4 mr-2" />
                     {dataLoading ? "Inscription..." : "Rejoindre la Team"}

@@ -88,16 +88,17 @@ const Seller = () => {
           business_name: businessName,
           slug: slug,
           description: description,
+          status: 'pending', // Demande en attente de validation admin
         });
 
       if (error) throw error;
 
       toast({
-        title: "Boutique créée avec succès !",
-        description: `Votre boutique: tasedda.dz/boutique/${slug}`,
+        title: "Demande envoyée !",
+        description: `Votre demande de boutique a été envoyée et sera examinée par l'administration.`,
       });
 
-      setIsSeller(true);
+      setIsSeller(false);
       navigate('/profile');
     } catch (error: any) {
       toast({
@@ -135,28 +136,45 @@ const Seller = () => {
   }
 
   if (isSeller) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Header />
-        
-        <main className="container mx-auto px-4 py-20">
-          <div className="text-center" data-aos="fade-up">
-            <CheckCircle className="h-20 w-20 mx-auto mb-6 text-gold" />
-            <h1 className="text-3xl font-display font-bold mb-4">
-              Votre <span className="gold-text">Boutique</span> est active !
-            </h1>
-            <p className="text-muted-foreground mb-8">
-              Vous avez déjà une boutique sur Tasedda. Consultez votre profil pour la gérer.
-            </p>
-            <Button onClick={() => navigate('/profile')} className="btn-gold">
-              Gérer ma boutique
-            </Button>
+    // Charger la boutique pour vérifier le statut
+    const [shop, setShop] = useState<any>(null);
+    useEffect(() => {
+      if (user) {
+        supabase.from('sellers').select('*').eq('user_id', user.id).single().then(({ data }) => setShop(data));
+      }
+    }, [user]);
+    if (shop && shop.status === 'pending') {
+      return (
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gold mb-4">Votre demande de boutique est en attente de validation par l'administration.</h2>
+            <p className="text-muted-foreground">Vous recevrez un email dès qu'elle sera validée.</p>
           </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
+        </div>
+      );
+    }
+    if (shop && shop.status === 'active') {
+      return (
+        <div className="min-h-screen bg-black">
+          <Header />
+          <main className="container mx-auto px-4 py-20">
+            <div className="text-center" data-aos="fade-up">
+              <CheckCircle className="h-20 w-20 mx-auto mb-6 text-gold" />
+              <h1 className="text-3xl font-display font-bold mb-4">
+                Votre <span className="gold-text">Boutique</span> est active !
+              </h1>
+              <p className="text-muted-foreground mb-8">
+                Vous avez déjà une boutique sur Tasedda. Consultez votre profil pour la gérer.
+              </p>
+              <Button onClick={() => navigate('/profile')} className="btn-gold">
+                Gérer ma boutique
+              </Button>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      );
+    }
   }
 
   return (

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Eye, CheckCircle, XCircle, Check, X, Crown, ShoppingBag, DollarSign, AlertCircle, RefreshCw } from 'lucide-react';
+import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Eye, CheckCircle, XCircle, Check, X, Crown, ShoppingBag, DollarSign, AlertCircle, RefreshCw, LayoutDashboard, UserPlus, UserCog, ShoppingCart, Box, Gift, Banknote } from 'lucide-react';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import Dashboard from './admin/Dashboard';
@@ -21,6 +21,20 @@ import Withdrawals from './admin/Withdrawals';
 import Primes from './admin/Primes';
 import Users from './admin/Users';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import React from 'react';
+
+const SECTIONS = [
+  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { key: 'team-requests', label: 'Demandes Team', icon: UserPlus },
+  { key: 'team-members', label: 'Membres Team', icon: UsersIcon },
+  { key: 'sellers', label: 'Boutiques', icon: Store },
+  { key: 'managers', label: 'Managers', icon: UserCog },
+  { key: 'users', label: 'Utilisateurs', icon: Shield },
+  { key: 'orders', label: 'Commandes', icon: ShoppingCart },
+  { key: 'products', label: 'Produits', icon: Box },
+  { key: 'primes', label: 'Primes', icon: Gift },
+  { key: 'withdrawals', label: 'Retraits', icon: Banknote },
+];
 
 const ADMIN_PASSWORD = 'AdminTasedda20252025';
 
@@ -157,18 +171,25 @@ const Admin = () => {
     }
   };
 
+  const generateLionPromoCode = () => {
+    const random = Math.floor(1000 + Math.random() * 9000);
+    return `LION${random}`;
+  };
+
   const handleJoinRequest = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
       const request = joinRequests.find(r => r.id === requestId);
       if (!request) return;
 
       if (status === 'approved') {
-        // Générer un code promo unique
-        const { data: promoCode, error: promoError } = await supabase
-          .rpc('generate_promo_code');
-
-        if (promoError) throw promoError;
-
+        // Générer un code promo unique LIONxxxx
+        let promoCode;
+        let exists = true;
+        while (exists) {
+          promoCode = generateLionPromoCode();
+          const { data: existing } = await supabase.from('team_members').select('id').eq('promo_code', promoCode).single();
+          exists = !!existing;
+        }
         // Créer le membre d'équipe
         const { error: memberError } = await supabase
           .from('team_members')
@@ -182,7 +203,6 @@ const Admin = () => {
             available_commissions: 0,
             is_active: true
           });
-
         if (memberError) throw memberError;
       }
 
@@ -224,113 +244,61 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="bg-gradient-to-r from-black via-gray-900 to-black border-b border-gold/20">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Shield className="h-8 w-8 text-gold" />
-              <h1 className="text-2xl font-display font-bold gold-text">
-                Panel Administrateur
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/')}
-                className="border-gold/20 text-gold hover:bg-gold/10"
-              >
-                Retour au site
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen flex bg-black">
+      {/* Sidebar */}
+      <aside className="w-64 min-h-screen bg-gradient-to-b from-black via-black to-gold/10 border-r border-gold/20 shadow-lg flex flex-col py-6 px-4 sticky top-0 z-20">
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <Crown className="w-8 h-8 text-gold" />
+          <span className="text-2xl font-bold gold-text tracking-wide">Tasedda Admin</span>
         </div>
-      </div>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-display font-bold">
-            <span className="gold-text">Admin</span> Panel
+        <nav className="flex-1 space-y-2">
+          {SECTIONS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium text-left hover:bg-gold/10 hover:text-gold ${tab === key ? 'bg-gold/20 text-gold shadow' : 'text-white/80'}`}
+              onClick={() => setTab(key)}
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="mt-10 text-xs text-muted-foreground text-center">© Tasedda 2024</div>
+      </aside>
+      {/* Main content */}
+      <main className="flex-1 min-h-screen bg-black/95 px-0 md:px-8 py-8">
+        {/* Header section */}
+        <div className="flex items-center justify-between mb-8 px-4 md:px-0">
+          <h1 className="text-2xl font-bold gold-text tracking-wide flex items-center gap-2">
+            {SECTIONS.find(s => s.key === tab)?.icon && (
+              <span className="inline-flex items-center justify-center bg-gold/10 rounded-full p-2 mr-2">
+                {React.createElement(SECTIONS.find(s => s.key === tab)?.icon, { className: 'w-6 h-6 text-gold' })}
+              </span>
+            )}
+            {SECTIONS.find(s => s.key === tab)?.label}
           </h1>
-          <Button onClick={() => {
-            loadDashboardData();
-            loadTeamData();
-            loadJoinRequests();
-            toast({ title: "Données rafraîchies" });
-          }} className="btn-gold">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Rafraîchir
+          <Button variant="outline" className="border-gold/40 text-gold hover:bg-gold/10" onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Rafraîchir
           </Button>
         </div>
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid grid-cols-9">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="team-requests">Demandes Team</TabsTrigger>
-            <TabsTrigger value="team-members">Membres Team</TabsTrigger>
-            <TabsTrigger value="sellers">Boutiques</TabsTrigger>
-            <TabsTrigger value="orders">Commandes</TabsTrigger>
-            <TabsTrigger value="products">Produits</TabsTrigger>
-            <TabsTrigger value="withdrawals">Retraits</TabsTrigger>
-            <TabsTrigger value="primes">Primes</TabsTrigger>
-            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard"><Dashboard /></TabsContent>
-          <TabsContent value="team-requests">
-            {joinRequests.map(r => (
-              <div key={r.id} className="bg-black/40 p-4 rounded flex justify-between items-center mb-2">
-                <div>
-                  <div className="font-bold">{r.profiles?.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{r.profiles?.email}</div>
-                  <div className="text-xs">Demandé le : {new Date(r.created_at).toLocaleDateString()}</div>
-                  <div className="text-xs">Statut : {r.status}</div>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setSelectedRequest(r); setModalOpen(true); }}>
-                    <Eye className="w-4 h-4 mr-1" /> Voir
-                  </Button>
-                  {r.status === 'pending' && (
-                    <>
-                      <Button size="sm" className="bg-green-600 text-white" onClick={() => handleJoinRequest(r.id, 'approved')}>
-                        <Check className="w-4 h-4 mr-1" /> Accepter
-                      </Button>
-                      <Button size="sm" className="bg-red-600 text-white" onClick={() => handleJoinRequest(r.id, 'rejected')}>
-                        <X className="w-4 h-4 mr-1" /> Refuser
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-              <DialogContent>
-                <DialogTitle>Détail de la demande</DialogTitle>
-                {selectedRequest && (
-                  <div className="space-y-2">
-                    <div><b>Nom :</b> {selectedRequest.profiles?.full_name}</div>
-                    <div><b>Email :</b> {selectedRequest.profiles?.email}</div>
-                    <div><b>Téléphone :</b> {selectedRequest.profiles?.phone}</div>
-                    <div><b>Statut :</b> {selectedRequest.status}</div>
-                    <div><b>Date :</b> {new Date(selectedRequest.created_at).toLocaleDateString()}</div>
-                    <div><b>Notes admin :</b> {selectedRequest.admin_notes || '-'}</div>
-                  </div>
-                )}
-                <div className="flex gap-2 justify-end mt-4">
-                  <Button variant="outline" onClick={() => setModalOpen(false)}>Fermer</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-          <TabsContent value="team-members"><TeamMembers /></TabsContent>
-          <TabsContent value="sellers"><Sellers /></TabsContent>
-          <TabsContent value="orders"><Orders /></TabsContent>
-          <TabsContent value="products"><Products /></TabsContent>
-          <TabsContent value="withdrawals"><Withdrawals /></TabsContent>
-          <TabsContent value="primes"><Primes /></TabsContent>
-          <TabsContent value="users">
-            <Users users={users} />
-          </TabsContent>
-        </Tabs>
+        <div className="rounded-xl bg-black/80 shadow-lg p-4 md:p-8 min-h-[60vh]">
+          {tab === 'dashboard' && <Dashboard />}
+          {tab === 'team-requests' && <TeamRequests />}
+          {tab === 'team-members' && <TeamMembers />}
+          {tab === 'sellers' && <Sellers />}
+          {tab === 'managers' && (
+            <div>
+              {/* Section managers à intégrer ici */}
+              <h2 className="text-xl font-bold mb-4">Managers</h2>
+              {/* ... */}
+            </div>
+          )}
+          {tab === 'users' && <Users />}
+          {tab === 'orders' && <Orders />}
+          {tab === 'products' && <Products />}
+          {tab === 'primes' && <Primes />}
+          {tab === 'withdrawals' && <Withdrawals />}
+        </div>
       </main>
     </div>
   );

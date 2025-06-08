@@ -26,8 +26,36 @@ const TeamRequests = () => {
   }, []);
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
+    const req = requests.find(r => r.id === id);
+    if (!req) return;
+    if (status === 'approved') {
+      // Générer un code promo unique LIONxxxx
+      let promoCode;
+      let exists = true;
+      while (exists) {
+        promoCode = 'LION' + Math.floor(1000 + Math.random() * 9000);
+        const { data: existing } = await supabase.from('team_members').select('id').eq('promo_code', promoCode).single();
+        exists = !!existing;
+      }
+      // Créer le membre d'équipe
+      await supabase.from('team_members').insert({
+        user_id: req.user_id,
+        promo_code: promoCode,
+        invited_by: req.invited_by,
+        rank: 1,
+        total_sales: 0,
+        total_commissions: 0,
+        available_commissions: 0,
+        is_active: true
+      });
+    }
     await supabase.from('team_join_requests').update({ status }).eq('id', id);
-    setRequests(reqs => reqs.map(r => r.id === id ? { ...r, status } : r));
+    // Rafraîchir la liste
+    const { data } = await supabase
+      .from('team_join_requests')
+      .select('*, profiles:profiles!team_join_requests_user_id_fkey(full_name, email, phone)')
+      .order('created_at', { ascending: false });
+    setRequests(data || []);
     toast({ title: status === 'approved' ? 'Demande acceptée' : 'Demande refusée' });
   };
 

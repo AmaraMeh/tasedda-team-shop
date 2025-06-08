@@ -22,6 +22,7 @@ interface Seller {
   monthly_fee: number;
   is_active: boolean;
   created_at: string;
+  status: string;
 }
 
 const SellerSpace = () => {
@@ -179,6 +180,28 @@ const SellerSpace = () => {
           </div>
         </main>
         <Footer />
+      </div>
+    );
+  }
+
+  // Empêcher l'accès si la boutique n'est pas validée
+  if (seller.status === 'pending') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gold mb-4">Votre demande de boutique est en attente de validation par l'administration.</h2>
+          <p className="text-muted-foreground">Vous recevrez un email dès qu'elle sera validée.</p>
+        </div>
+      </div>
+    );
+  }
+  if (seller.status === 'refused') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-500 mb-4">Votre demande de boutique a été refusée par l'administration.</h2>
+          <p className="text-muted-foreground">Contactez le support pour plus d'informations.</p>
+        </div>
       </div>
     );
   }
