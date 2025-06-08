@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,59 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { Crown, Mail, Lock, User, Phone } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Compte créé avec succès !",
-        description: "Vérifiez votre email pour confirmer votre compte, ou contactez l'admin si la confirmation email est désactivée.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,17 +33,58 @@ const Auth = () => {
 
       toast({
         title: "Connexion réussie !",
-        description: "Bienvenue sur Tasedda.",
+        description: "Vous êtes maintenant connecté.",
       });
+
+      navigate('/');
     } catch (error: any) {
-      let errorMessage = error.message;
-      if (error.message.includes('Email not confirmed')) {
-        errorMessage = "Email non confirmé. Contactez l'administrateur ou vérifiez votre boîte email.";
-      }
-      
       toast({
         title: "Erreur de connexion",
-        description: errorMessage,
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation du téléphone (10 chiffres)
+    if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      toast({
+        title: "Erreur",
+        description: "Le numéro de téléphone doit contenir exactement 10 chiffres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone: phone,
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Compte créé !",
+        description: "Vérifiez votre email pour confirmer votre compte.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur d'inscription",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -95,19 +93,14 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black"></div>
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23FFD700%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
-      
-      <Card className="w-full max-w-md glass-effect border-gold/20" data-aos="fade-up">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <Card className="w-full max-w-md glass-effect border-gold/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-display gold-text">
-            Tasedda
-          </CardTitle>
-          <p className="text-muted-foreground">
-            Votre plateforme e-commerce algérienne
-          </p>
+          <Crown className="h-12 w-12 mx-auto mb-4 text-gold" />
+          <CardTitle className="text-2xl gold-text">Lion</CardTitle>
+          <p className="text-muted-foreground">Votre espace membre</p>
         </CardHeader>
+
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6 bg-black/50">
@@ -122,40 +115,38 @@ const Auth = () => {
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-black/50 border-gold/20 focus:border-gold"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
+                  <Label htmlFor="signin-email">Email</Label>
                   <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="signin-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="votre@email.com"
+                      className="pl-10 bg-black/50 border-gold/20 focus:border-gold"
                       required
-                      className="bg-black/50 border-gold/20 focus:border-gold pr-10"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Mot de passe</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-10 bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                    />
+                  </div>
+                </div>
+
                 <Button type="submit" className="w-full btn-gold" disabled={loading}>
-                  <LogIn className="h-4 w-4 mr-2" />
                   {loading ? "Connexion..." : "Se connecter"}
                 </Button>
               </form>
@@ -164,66 +155,78 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Nom complet</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    className="bg-black/50 border-gold/20 focus:border-gold"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-black/50 border-gold/20 focus:border-gold"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
+                  <Label htmlFor="signup-name">Nom complet</Label>
                   <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="signup-name"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Votre nom complet"
+                      className="pl-10 bg-black/50 border-gold/20 focus:border-gold"
                       required
-                      className="bg-black/50 border-gold/20 focus:border-gold pr-10"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Téléphone (10 chiffres)</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="0123456789"
+                      className="pl-10 bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                      pattern="[0-9]{10}"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Format: 0123456789 (10 chiffres)</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="votre@email.com"
+                      className="pl-10 bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Mot de passe</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-10 bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
                 <Button type="submit" className="w-full btn-gold" disabled={loading}>
-                  <UserPlus className="h-4 w-4 mr-2" />
                   {loading ? "Création..." : "Créer un compte"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
-
-          <div className="mt-6 text-center">
-            <Button 
-              variant="link" 
-              onClick={() => navigate('/admin')}
-              className="text-gold/60 hover:text-gold text-xs"
-            >
-              Accès Administrateur
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

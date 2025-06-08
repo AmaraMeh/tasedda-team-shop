@@ -19,9 +19,6 @@ const HeroSection = () => {
               <h1 className="text-6xl lg:text-8xl font-display font-bold gold-text leading-none">
                 Lion
               </h1>
-              <p className="text-xl text-muted-foreground font-light">
-                by Tasedda
-              </p>
             </div>
           </div>
 
@@ -32,7 +29,7 @@ const HeroSection = () => {
           
           <p className="text-lg lg:text-xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
             Découvrez une expérience shopping unique avec notre sélection de vêtements premium, 
-            notre système d'affiliation Team Lion, et nos boutiques partenaires locales.
+            notre système d'affiliation Team Lion, et nos boutiques Tasedda partenaires locales.
           </p>
 
           {/* CTA Buttons */}

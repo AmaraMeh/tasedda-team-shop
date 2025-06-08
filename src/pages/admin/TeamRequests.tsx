@@ -31,7 +31,8 @@ const TeamRequests = () => {
     if (data) {
       const typedData: TeamJoinRequest[] = data.map(item => ({
         ...item,
-        status: item.status as 'pending' | 'approved' | 'rejected'
+        status: item.status as 'pending' | 'approved' | 'rejected',
+        profiles: item.profiles || { full_name: 'N/A', email: 'N/A', phone: 'N/A' }
       }));
       setRequests(typedData);
     }
@@ -43,16 +44,24 @@ const TeamRequests = () => {
     if (!req) return;
     
     if (status === 'approved') {
-      // Générer un code promo unique LIONxxxx
+      // Générer un code promo unique de 3 lettres + 3 chiffres
       let promoCode;
       let exists = true;
       while (exists) {
-        promoCode = 'LION' + Math.floor(1000 + Math.random() * 9000);
-        const { data: existing } = await supabase.from('team_members').select('id').eq('promo_code', promoCode).single();
+        const letters = Array.from({length: 3}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+        const numbers = Array.from({length: 3}, () => Math.floor(Math.random() * 10)).join('');
+        promoCode = letters + numbers;
+        
+        const { data: existing } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('promo_code', promoCode)
+          .single();
         exists = !!existing;
       }
+      
       // Créer le membre d'équipe
-      await supabase.from('team_members').insert({
+      const { error: teamError } = await supabase.from('team_members').insert({
         user_id: req.user_id,
         promo_code: promoCode,
         invited_by: req.invited_by,
@@ -62,9 +71,23 @@ const TeamRequests = () => {
         available_commissions: 0,
         is_active: true
       });
+      
+      if (teamError) {
+        toast({ title: 'Erreur lors de la création du membre', variant: 'destructive' });
+        return;
+      }
     }
     
-    await supabase.from('team_join_requests').update({ status }).eq('id', id);
+    // Mettre à jour le statut de la demande
+    const { error } = await supabase
+      .from('team_join_requests')
+      .update({ status })
+      .eq('id', id);
+    
+    if (error) {
+      toast({ title: 'Erreur lors de la mise à jour', variant: 'destructive' });
+      return;
+    }
     
     toast({ title: status === 'approved' ? 'Demande acceptée' : 'Demande refusée' });
     fetchRequests();
@@ -73,9 +96,9 @@ const TeamRequests = () => {
 
   const exportCSV = () => {
     const ws = utils.json_to_sheet(requests.map(r => ({
-      Nom: r.profiles?.full_name,
-      Email: r.profiles?.email,
-      Téléphone: r.profiles?.phone,
+      Nom: r.profiles?.full_name || 'N/A',
+      Email: r.profiles?.email || 'N/A',
+      Téléphone: r.profiles?.phone || 'N/A',
       Statut: r.status,
       Date: new Date(r.created_at).toLocaleDateString()
     })));
@@ -93,17 +116,21 @@ const TeamRequests = () => {
   
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 mb-2">
-        <input
-          type="text"
-          placeholder="Recherche par nom/email"
-          className="input input-bordered flex-1 px-3 py-2 bg-black/50 border border-gold/20 rounded-lg text-white"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        />
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold gold-text">Demandes Team Lion</h2>
         <Button onClick={exportCSV} className="bg-gold/20 hover:bg-gold/30 text-gold border-gold/20">
           Exporter Excel
         </Button>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Recherche par nom/email"
+          className="flex-1 px-3 py-2 bg-black/50 border border-gold/20 rounded-lg text-white"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+        />
       </div>
       
       <div className="overflow-x-auto">
@@ -122,7 +149,7 @@ const TeamRequests = () => {
             {filtered.map(r => (
               <tr key={r.id} className="border-b border-gold/10 hover:bg-gold/5">
                 <td className="p-3">{r.profiles?.full_name || 'N/A'}</td>
-                <td className="p-3">{r.profiles?.email}</td>
+                <td className="p-3">{r.profiles?.email || 'N/A'}</td>
                 <td className="p-3">{r.profiles?.phone || 'N/A'}</td>
                 <td className="p-3">{new Date(r.created_at).toLocaleDateString()}</td>
                 <td className="p-3">
@@ -170,11 +197,28 @@ const TeamRequests = () => {
           <DialogTitle className="text-gold">Détail de la demande</DialogTitle>
           {selected && (
             <div className="space-y-3">
-              <div><strong>Nom :</strong> {selected.profiles?.full_name}</div>
-              <div><strong>Email :</strong> {selected.profiles?.email}</div>
-              <div><strong>Téléphone :</strong> {selected.profiles?.phone}</div>
+              <div><strong>Nom :</strong> {selected.profiles?.full_name || 'N/A'}</div>
+              <div><strong>Email :</strong> {selected.profiles?.email || 'N/A'}</div>
+              <div><strong>Téléphone :</strong> {selected.profiles?.phone || 'N/A'}</div>
               <div><strong>Statut :</strong> {selected.status}</div>
               <div><strong>Date :</strong> {new Date(selected.created_at).toLocaleDateString()}</div>
+              
+              {selected.status === 'pending' && (
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    onClick={() => handleAction(selected.id, 'approved')}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Accepter
+                  </Button>
+                  <Button 
+                    onClick={() => handleAction(selected.id, 'rejected')}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Refuser
+                  </Button>
+                </div>
+              )}
             </div>
           )}
           <div className="flex gap-2 justify-end mt-4">

@@ -1,11 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, TrendingUp, Gift, Users, Star, CheckCircle } from 'lucide-react';
@@ -13,15 +12,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Team = () => {
   const { user, loading } = useAuth();
-  const [inviteCode, setInviteCode] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [isTeamMember, setIsTeamMember] = useState(false);
+  const [hasRequest, setHasRequest] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [acceptRules, setAcceptRules] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -29,34 +24,42 @@ const Team = () => {
       return;
     }
     if (user) {
-      checkTeamMembership(user.id);
+      checkTeamStatus(user.id);
     }
   }, [user, loading, navigate]);
 
-  const checkTeamMembership = async (userId: string) => {
+  const checkTeamStatus = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Vérifier si déjà membre de la team
+      const { data: teamMember, error: teamError } = await supabase
         .from('team_members')
         .select('id')
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setIsTeamMember(!!data);
+      if (teamError && teamError.code !== 'PGRST116') throw teamError;
+      
+      // Vérifier si demande en cours
+      const { data: request, error: requestError } = await supabase
+        .from('team_join_requests')
+        .select('id, status')
+        .eq('user_id', userId)
+        .single();
+
+      if (requestError && requestError.code !== 'PGRST116') throw requestError;
+
+      setIsTeamMember(!!teamMember);
+      setHasRequest(!!request);
     } catch (error: any) {
-      console.error('Error checking team membership:', error);
+      console.error('Error checking team status:', error);
     } finally {
       setDataLoading(false);
     }
   };
 
-  const joinTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const joinTeam = async () => {
     if (!user) return;
-    if (!fullName || !email || !phone) {
-      toast({ title: 'Veuillez remplir toutes les informations personnelles.' });
-      return;
-    }
+    
     setDataLoading(true);
     try {
       // Vérifier si l'utilisateur possède déjà une boutique
@@ -64,72 +67,35 @@ const Team = () => {
         .from('sellers')
         .select('id')
         .eq('user_id', user.id)
+        .eq('is_active', true)
         .single();
+        
       if (seller) {
         toast({
           title: "Impossible de rejoindre la Team",
-          description: "Vous possédez déjà une boutique sur Lion. Un vendeur ne peut pas être membre de la Team.",
+          description: "Vous possédez déjà une boutique. Un vendeur ne peut pas être membre de la Team.",
           variant: "destructive",
         });
         setDataLoading(false);
         return;
       }
-      
-      // Vérifier si déjà membre ou déjà une demande
-      const { data: teamReq } = await supabase
-        .from('team_join_requests')
-        .select('id, status')
-        .eq('user_id', user.id)
-        .single();
-      const { data: teamMember } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      if (teamReq || teamMember) {
-        toast({
-          title: "Déjà demandé ou membre",
-          description: "Vous avez déjà demandé à rejoindre la team ou vous êtes déjà membre.",
-          variant: "destructive",
-        });
-        setDataLoading(false);
-        return;
-      }
-      
-      // Désactiver le statut vendeur si existant
-      await supabase.from('sellers').update({ is_active: false }).eq('user_id', user.id);
-      
-      // Mettre à jour le profil avec les infos
-      await supabase.from('profiles').update({ full_name: fullName, email, phone }).eq('id', user.id);
-      
-      // Trouver l'invitant si code fourni
-      let invitedBy = null;
-      if (inviteCode) {
-        const { data: inviter } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('promo_code', inviteCode)
-          .single();
-        if (inviter) {
-          invitedBy = inviter.id;
-        }
-      }
-      
-      // Créer la demande d'adhésion
+
+      // Créer la demande d'adhésion avec les données du profil existant
       const { error } = await supabase
         .from('team_join_requests')
         .insert({
           user_id: user.id,
-          status: 'pending',
-          invited_by: invitedBy,
+          status: 'pending'
         });
+
       if (error) throw error;
-      
+
       toast({
         title: "Demande envoyée !",
         description: "Votre demande d'adhésion a été envoyée et sera examinée par l'administration.",
       });
-      navigate('/profile');
+
+      setHasRequest(true);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -169,10 +135,36 @@ const Team = () => {
               Vous êtes déjà membre de la <span className="gold-text">Team Lion</span> !
             </h1>
             <p className="text-muted-foreground mb-8">
-              Consultez votre espace Team pour voir vos statistiques et gérer vos commissions.
+              Consultez votre espace team pour voir vos statistiques et gérer vos commissions.
             </p>
             <Button onClick={() => navigate('/team-space')} className="btn-gold">
-              Voir mon espace Team
+              Accéder à mon espace
+            </Button>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  if (hasRequest) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Header />
+        
+        <main className="container mx-auto px-4 py-20">
+          <div className="text-center" data-aos="fade-up">
+            <Crown className="h-20 w-20 mx-auto mb-6 text-gold" />
+            <h1 className="text-3xl font-display font-bold mb-4">
+              Demande en cours
+            </h1>
+            <p className="text-muted-foreground mb-8">
+              Votre demande d'adhésion à la Team Lion est en cours d'examen par l'administration.
+              Vous recevrez une notification dès qu'elle sera traitée.
+            </p>
+            <Button onClick={() => navigate('/profile')} variant="outline" className="border-gold/20">
+              Retour au profil
             </Button>
           </div>
         </main>
@@ -291,90 +283,27 @@ const Team = () => {
           </div>
         </section>
 
-        {/* Formulaire d'inscription */}
+        {/* Call to Action */}
         <section className="container mx-auto px-4">
-          <div className="max-w-md mx-auto" data-aos="fade-up">
-            <Card className="glass-effect border-gold/20">
+          <div className="text-center" data-aos="fade-up">
+            <Card className="glass-effect border-gold/20 max-w-md mx-auto">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl gold-text">
-                  Rejoindre la Team Lion
+                  Prêt à commencer ?
                 </CardTitle>
                 <p className="text-muted-foreground">
-                  Commencez votre aventure d'ambassadeur dès aujourd'hui
+                  Rejoignez la Team Lion et commencez à gagner des commissions dès aujourd'hui
                 </p>
               </CardHeader>
               <CardContent>
-                <form onSubmit={joinTeam} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Nom complet</Label>
-                    <Input
-                      id="fullName"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Votre nom complet"
-                      className="bg-black/50 border-gold/20 focus:border-gold"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
-                      className="bg-black/50 border-gold/20 focus:border-gold"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Téléphone</Label>
-                    <Input
-                      id="phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+213xxxxxxxxx"
-                      className="bg-black/50 border-gold/20 focus:border-gold"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="inviteCode">Code d'invitation (optionnel)</Label>
-                    <Input
-                      id="inviteCode"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      placeholder="LION1234"
-                      className="bg-black/50 border-gold/20 focus:border-gold"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Si vous avez été invité par un membre, saisissez son code
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="acceptRules"
-                      checked={acceptRules}
-                      onChange={e => setAcceptRules(e.target.checked)}
-                      className="accent-gold"
-                      required
-                    />
-                    <Label htmlFor="acceptRules" className="text-sm">
-                      J'accepte les conditions d'utilisation
-                    </Label>
-                  </div>
-                  
-                  <Button type="submit" className="w-full btn-gold" disabled={dataLoading || !acceptRules}>
-                    <Crown className="h-4 w-4 mr-2" />
-                    {dataLoading ? "Inscription..." : "Rejoindre la Team Lion"}
-                  </Button>
-                </form>
+                <Button 
+                  onClick={joinTeam} 
+                  className="w-full btn-gold" 
+                  disabled={dataLoading}
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  {dataLoading ? "Inscription..." : "Rejoindre la Team Lion"}
+                </Button>
               </CardContent>
             </Card>
           </div>
