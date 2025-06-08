@@ -1,20 +1,36 @@
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { utils, writeFile } from 'xlsx';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Seller } from '@/types';
-import { Check, X, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Store, Search } from 'lucide-react';
+
+interface Seller {
+  id: string;
+  user_id: string;
+  business_name: string;
+  description?: string;
+  slug: string;
+  status: 'pending' | 'active' | 'suspended';
+  subscription_status: 'trial' | 'active' | 'expired';
+  subscription_expires_at?: string;
+  monthly_fee: number;
+  created_at: string;
+  profiles?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+  };
+}
 
 const Sellers = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-  const [selected, setSelected] = useState<Seller | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,33 +43,25 @@ const Sellers = () => {
         .from('sellers')
         .select(`
           *,
-          profiles:profiles!sellers_user_id_fkey(full_name, email, phone)
+          profiles(full_name, email, phone)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      const typedData: Seller[] = data?.map(item => ({
-        ...item,
-        status: item.status as 'pending' | 'active' | 'refused' | 'blocked',
-        subscription_status: item.subscription_status as 'trial' | 'active' | 'expired',
-        profiles: item.profiles || { full_name: 'N/A', email: 'N/A', phone: 'N/A' }
-      })) || [];
-      
-      setSellers(typedData);
-    } catch (error: any) {
+      setSellers(data || []);
+    } catch (error) {
       console.error('Error fetching sellers:', error);
       toast({
-        title: "Erreur",
-        description: "Impossible de charger les vendeurs",
-        variant: "destructive",
+        title: 'Erreur',
+        description: 'Impossible de charger les vendeurs',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (id: string, status: 'active' | 'refused' | 'blocked') => {
+  const handleStatusUpdate = async (sellerId: string, status: 'active' | 'suspended') => {
     try {
       const { error } = await supabase
         .from('sellers')
@@ -61,310 +69,249 @@ const Sellers = () => {
           status,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', sellerId);
 
       if (error) throw error;
-      
+
       toast({
-        title: "Statut mis à jour",
-        description: `Le vendeur a été ${status === 'active' ? 'activé' : status === 'refused' ? 'refusé' : 'bloqué'}`,
+        title: 'Succès',
+        description: `Vendeur ${status === 'active' ? 'activé' : 'suspendu'} avec succès`,
       });
-      
+
       fetchSellers();
-      setModalOpen(false);
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error updating seller:', error);
       toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le statut",
-        variant: "destructive",
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour le vendeur',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleSubscriptionPayment = async (id: string, paid: boolean) => {
+  const handleSubscriptionUpdate = async (sellerId: string, subscriptionStatus: 'active' | 'expired') => {
     try {
-      const subscriptionStatus = paid ? 'active' : 'expired';
-      const subscriptionExpiresAt = paid 
-        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // +30 jours
-        : new Date().toISOString();
+      const expirationDate = subscriptionStatus === 'active' 
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+        : null;
 
       const { error } = await supabase
         .from('sellers')
         .update({ 
           subscription_status: subscriptionStatus,
-          subscription_expires_at: subscriptionExpiresAt,
+          subscription_expires_at: expirationDate,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', sellerId);
 
       if (error) throw error;
-      
+
       toast({
-        title: paid ? "Paiement validé" : "Abonnement expiré",
-        description: paid 
-          ? "L'abonnement a été renouvelé pour 30 jours" 
-          : "L'abonnement a été marqué comme expiré",
+        title: 'Succès',
+        description: `Abonnement ${subscriptionStatus === 'active' ? 'activé' : 'expiré'} avec succès`,
       });
-      
+
       fetchSellers();
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error updating subscription:', error);
       toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour l'abonnement",
-        variant: "destructive",
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour l\'abonnement',
+        variant: 'destructive',
       });
     }
   };
 
-  const exportCSV = () => {
-    const ws = utils.json_to_sheet(sellers.map(s => ({
-      Nom: s.profiles?.full_name || 'N/A',
-      Email: s.profiles?.email || 'N/A',
-      Téléphone: s.profiles?.phone || 'N/A',
-      'Nom boutique': s.business_name,
-      Statut: s.status,
-      'Statut abonnement': s.subscription_status,
-      'Frais mensuel': s.monthly_fee,
-      Date: new Date(s.created_at).toLocaleDateString()
-    })));
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'Vendeurs');
-    writeFile(wb, 'vendeurs.xlsx');
-  };
-
-  const filtered = sellers.filter(s =>
-    (s.profiles?.full_name || '').toLowerCase().includes(filter.toLowerCase()) ||
-    (s.profiles?.email || '').toLowerCase().includes(filter.toLowerCase()) ||
-    s.business_name.toLowerCase().includes(filter.toLowerCase())
+  const filteredSellers = sellers.filter(seller =>
+    seller.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    seller.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    seller.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
-    return <div className="flex justify-center py-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
-    </div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold gold-text">Gestion des Vendeurs</h2>
-        <Button onClick={exportCSV} className="bg-gold/20 hover:bg-gold/30 text-gold border-gold/20">
-          Exporter Excel
-        </Button>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-white">Gestion des Vendeurs</h1>
+        <Badge variant="outline" className="text-gold border-gold">
+          {sellers.filter(s => s.status === 'pending').length} En attente
+        </Badge>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Recherche par nom/email/boutique"
-          className="flex-1 px-3 py-2 bg-black/50 border border-gold/20 rounded-lg text-white"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        />
-      </div>
+      {/* Search */}
+      <Card className="glass-effect border-gold/20">
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Rechercher par nom, entreprise ou email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-black/50 border-gold/20"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="bg-gold/10 border-b border-gold/20">
-              <th className="text-left p-3 text-gold">Vendeur</th>
-              <th className="text-left p-3 text-gold">Boutique</th>
-              <th className="text-left p-3 text-gold">Contact</th>
-              <th className="text-left p-3 text-gold">Statut</th>
-              <th className="text-left p-3 text-gold">Abonnement</th>
-              <th className="text-left p-3 text-gold">Frais</th>
-              <th className="text-left p-3 text-gold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} className="border-b border-gold/10 hover:bg-gold/5">
-                <td className="p-3">
-                  <div>
-                    <div className="font-medium">{s.profiles?.full_name || 'N/A'}</div>
-                    <div className="text-xs text-muted-foreground">{s.profiles?.email || 'N/A'}</div>
-                  </div>
-                </td>
-                <td className="p-3">
-                  <div className="font-medium">{s.business_name}</div>
-                  <div className="text-xs text-muted-foreground">/{s.slug}</div>
-                </td>
-                <td className="p-3">{s.profiles?.phone || 'N/A'}</td>
-                <td className="p-3">
-                  <Badge variant={
-                    s.status === 'active' ? 'default' :
-                    s.status === 'pending' ? 'secondary' :
-                    s.status === 'refused' ? 'destructive' : 'outline'
-                  }>
-                    {s.status === 'active' ? 'Actif' :
-                     s.status === 'pending' ? 'En attente' :
-                     s.status === 'refused' ? 'Refusé' : 'Bloqué'}
-                  </Badge>
-                </td>
-                <td className="p-3">
-                  <div className="space-y-1">
-                    <Badge variant={
-                      s.subscription_status === 'active' ? 'default' :
-                      s.subscription_status === 'trial' ? 'secondary' : 'destructive'
-                    }>
-                      {s.subscription_status === 'active' ? 'Payé' :
-                       s.subscription_status === 'trial' ? 'Essai' : 'Expiré'}
-                    </Badge>
-                    {s.subscription_status !== 'trial' && (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubscriptionPayment(s.id, true)}
-                          className="bg-green-600 hover:bg-green-700 text-xs px-2 py-1 h-auto"
-                        >
-                          Valider paiement
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleSubscriptionPayment(s.id, false)}
-                          className="bg-red-600 hover:bg-red-700 text-xs px-2 py-1 h-auto"
-                        >
-                          Expirer
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="p-3 text-gold font-medium">{s.monthly_fee} DA</td>
-                <td className="p-3">
+      <div className="grid gap-6">
+        {filteredSellers.length === 0 ? (
+          <Card className="glass-effect border-gold/20">
+            <CardContent className="text-center py-12">
+              <Store className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Aucun vendeur trouvé</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredSellers.map((seller) => (
+            <Card key={seller.id} className="glass-effect border-gold/20">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3">
+                    <Store className="h-5 w-5" />
+                    {seller.business_name}
+                  </CardTitle>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => { setSelected(s); setModalOpen(true); }}
-                      className="bg-blue-600 hover:bg-blue-700"
+                    <Badge
+                      variant={
+                        seller.status === 'pending' ? 'default' :
+                        seller.status === 'active' ? 'default' : 'destructive'
+                      }
                     >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                    {s.status === 'pending' && (
+                      {seller.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                      {seller.status === 'active' && <CheckCircle className="h-3 w-3 mr-1" />}
+                      {seller.status === 'suspended' && <XCircle className="h-3 w-3 mr-1" />}
+                      {seller.status === 'pending' ? 'En attente' :
+                       seller.status === 'active' ? 'Actif' : 'Suspendu'}
+                    </Badge>
+                    <Badge
+                      variant={seller.subscription_status === 'active' ? 'default' : 'secondary'}
+                    >
+                      {seller.subscription_status === 'trial' ? 'Essai' :
+                       seller.subscription_status === 'active' ? 'Abonné' : 'Expiré'}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Propriétaire</Label>
+                      <p className="font-medium">{seller.profiles?.full_name || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Email</Label>
+                      <p className="font-medium">{seller.profiles?.email || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Téléphone</Label>
+                      <p className="font-medium">{seller.profiles?.phone || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Slug boutique</Label>
+                      <p className="font-medium">/{seller.slug}</p>
+                    </div>
+                  </div>
+
+                  {seller.description && (
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Description</Label>
+                      <p className="font-medium">{seller.description}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Abonnement mensuel</Label>
+                      <p className="font-medium">{seller.monthly_fee} DA/mois</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Date de création</Label>
+                      <p className="font-medium">
+                        {new Date(seller.created_at).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {seller.subscription_expires_at && (
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Expiration abonnement</Label>
+                      <p className="font-medium">
+                        {new Date(seller.subscription_expires_at).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-4">
+                    {seller.status === 'pending' && (
                       <>
                         <Button
-                          size="sm"
-                          onClick={() => handleStatusChange(s.id, 'active')}
-                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => handleStatusUpdate(seller.id, 'active')}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
                         >
-                          <Check className="h-3 w-3" />
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approuver
                         </Button>
                         <Button
-                          size="sm"
-                          onClick={() => handleStatusChange(s.id, 'refused')}
-                          className="bg-red-600 hover:bg-red-700"
+                          onClick={() => handleStatusUpdate(seller.id, 'suspended')}
+                          variant="destructive"
+                          className="flex-1"
                         >
-                          <X className="h-3 w-3" />
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Refuser
                         </Button>
                       </>
                     )}
-                    {s.status === 'active' && (
+
+                    {seller.status === 'active' && (
+                      <>
+                        {seller.subscription_status !== 'active' && (
+                          <Button
+                            onClick={() => handleSubscriptionUpdate(seller.id, 'active')}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Activer Abonnement
+                          </Button>
+                        )}
+                        {seller.subscription_status === 'active' && (
+                          <Button
+                            onClick={() => handleSubscriptionUpdate(seller.id, 'expired')}
+                            variant="outline"
+                          >
+                            Suspendre Abonnement
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleStatusUpdate(seller.id, 'suspended')}
+                          variant="destructive"
+                        >
+                          Suspendre Vendeur
+                        </Button>
+                      </>
+                    )}
+
+                    {seller.status === 'suspended' && (
                       <Button
-                        size="sm"
-                        onClick={() => handleStatusChange(s.id, 'blocked')}
-                        variant="destructive"
+                        onClick={() => handleStatusUpdate(seller.id, 'active')}
+                        className="bg-green-600 hover:bg-green-700"
                       >
-                        Bloquer
+                        Réactiver
                       </Button>
                     )}
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
-
-      {filtered.length === 0 && (
-        <div className="text-center text-muted-foreground py-8">
-          Aucun vendeur trouvé
-        </div>
-      )}
-
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-black border-gold/20">
-          <DialogTitle className="text-gold">Détail du vendeur</DialogTitle>
-          {selected && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <strong>Nom :</strong> {selected.profiles?.full_name || 'N/A'}
-                </div>
-                <div>
-                  <strong>Email :</strong> {selected.profiles?.email || 'N/A'}
-                </div>
-                <div>
-                  <strong>Téléphone :</strong> {selected.profiles?.phone || 'N/A'}
-                </div>
-                <div>
-                  <strong>Boutique :</strong> {selected.business_name}
-                </div>
-                <div>
-                  <strong>Slug :</strong> /{selected.slug}
-                </div>
-                <div>
-                  <strong>Statut :</strong> {selected.status}
-                </div>
-                <div>
-                  <strong>Abonnement :</strong> {selected.subscription_status}
-                </div>
-                <div>
-                  <strong>Frais :</strong> {selected.monthly_fee} DA
-                </div>
-              </div>
-              
-              {selected.description && (
-                <div>
-                  <strong>Description :</strong>
-                  <p className="mt-1 text-muted-foreground">{selected.description}</p>
-                </div>
-              )}
-
-              <div>
-                <strong>Date d'inscription :</strong> {new Date(selected.created_at).toLocaleDateString()}
-              </div>
-
-              {selected.subscription_expires_at && (
-                <div>
-                  <strong>Expiration abonnement :</strong> {new Date(selected.subscription_expires_at).toLocaleDateString()}
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-6">
-                {selected.status === 'pending' && (
-                  <>
-                    <Button 
-                      onClick={() => handleStatusChange(selected.id, 'active')}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      Accepter
-                    </Button>
-                    <Button 
-                      onClick={() => handleStatusChange(selected.id, 'refused')}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Refuser
-                    </Button>
-                  </>
-                )}
-                {selected.status === 'active' && (
-                  <Button 
-                    onClick={() => handleStatusChange(selected.id, 'blocked')}
-                    variant="destructive"
-                  >
-                    Bloquer
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="flex gap-2 justify-end mt-4">
-            <Button variant="outline" onClick={() => setModalOpen(false)} className="border-gold/20">
-              Fermer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

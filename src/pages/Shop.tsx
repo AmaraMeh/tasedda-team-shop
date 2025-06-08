@@ -63,6 +63,7 @@ const Shop = () => {
     if (data) {
       const productsWithCategory = data.map(item => ({
         ...item,
+        image: item.image_url || '/placeholder.svg',
         category: item.categories?.name || 'Sans catégorie',
         inStock: item.stock_quantity ? item.stock_quantity > 0 : true
       }));

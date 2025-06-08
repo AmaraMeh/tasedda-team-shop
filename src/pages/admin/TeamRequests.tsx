@@ -1,18 +1,26 @@
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { utils, writeFile } from 'xlsx';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { TeamJoinRequest } from '@/types';
+import { CheckCircle, XCircle, Clock, User } from 'lucide-react';
+
+interface TeamRequest {
+  id: string;
+  user_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  admin_notes?: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+}
 
 const TeamRequests = () => {
-  const [requests, setRequests] = useState<TeamJoinRequest[]>([]);
+  const [requests, setRequests] = useState<TeamRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-  const [selected, setSelected] = useState<TeamJoinRequest | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -20,214 +28,183 @@ const TeamRequests = () => {
   }, []);
 
   const fetchRequests = async () => {
-    const { data } = await supabase
-      .from('team_join_requests')
-      .select(`
-        *,
-        profiles:profiles!team_join_requests_user_id_fkey(full_name, email, phone)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (data) {
-      const typedData: TeamJoinRequest[] = data.map(item => ({
-        ...item,
-        status: item.status as 'pending' | 'approved' | 'rejected',
-        profiles: item.profiles || { full_name: 'N/A', email: 'N/A', phone: 'N/A' }
-      }));
-      setRequests(typedData);
-    }
-    setLoading(false);
-  };
+    try {
+      const { data, error } = await supabase
+        .from('team_requests_with_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const handleAction = async (id: string, status: 'approved' | 'rejected') => {
-    const req = requests.find(r => r.id === id);
-    if (!req) return;
-    
-    if (status === 'approved') {
-      // Générer un code promo unique de 3 lettres + 3 chiffres
-      let promoCode;
-      let exists = true;
-      while (exists) {
-        const letters = Array.from({length: 3}, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
-        const numbers = Array.from({length: 3}, () => Math.floor(Math.random() * 10)).join('');
-        promoCode = letters + numbers;
-        
-        const { data: existing } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('promo_code', promoCode)
-          .single();
-        exists = !!existing;
-      }
-      
-      // Créer le membre d'équipe
-      const { error: teamError } = await supabase.from('team_members').insert({
-        user_id: req.user_id,
-        promo_code: promoCode,
-        invited_by: req.invited_by,
-        rank: 1,
-        total_sales: 0,
-        total_commissions: 0,
-        available_commissions: 0,
-        is_active: true
+      if (error) throw error;
+      setRequests(data || []);
+    } catch (error) {
+      console.error('Error fetching team requests:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de charger les demandes',
+        variant: 'destructive',
       });
-      
-      if (teamError) {
-        toast({ title: 'Erreur lors de la création du membre', variant: 'destructive' });
-        return;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (requestId: string, status: 'approved' | 'rejected') => {
+    try {
+      const { error: updateError } = await supabase
+        .from('team_join_requests')
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (updateError) throw updateError;
+
+      // If approved, create team member
+      if (status === 'approved') {
+        const request = requests.find(r => r.id === requestId);
+        if (request) {
+          // Generate promo code
+          const { data: promoData, error: promoError } = await supabase
+            .rpc('generate_promo_code');
+
+          if (promoError) throw promoError;
+
+          const { error: teamError } = await supabase
+            .from('team_members')
+            .insert({
+              user_id: request.user_id,
+              promo_code: promoData,
+              rank: 1,
+              is_active: true
+            });
+
+          if (teamError) throw teamError;
+        }
       }
+
+      toast({
+        title: 'Succès',
+        description: `Demande ${status === 'approved' ? 'approuvée' : 'rejetée'} avec succès`,
+      });
+
+      fetchRequests();
+    } catch (error) {
+      console.error('Error updating request:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour la demande',
+        variant: 'destructive',
+      });
     }
-    
-    // Mettre à jour le statut de la demande
-    const { error } = await supabase
-      .from('team_join_requests')
-      .update({ status })
-      .eq('id', id);
-    
-    if (error) {
-      toast({ title: 'Erreur lors de la mise à jour', variant: 'destructive' });
-      return;
-    }
-    
-    toast({ title: status === 'approved' ? 'Demande acceptée' : 'Demande refusée' });
-    fetchRequests();
-    setModalOpen(false);
   };
 
-  const exportCSV = () => {
-    const ws = utils.json_to_sheet(requests.map(r => ({
-      Nom: r.profiles?.full_name || 'N/A',
-      Email: r.profiles?.email || 'N/A',
-      Téléphone: r.profiles?.phone || 'N/A',
-      Statut: r.status,
-      Date: new Date(r.created_at).toLocaleDateString()
-    })));
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'DemandesTeam');
-    writeFile(wb, 'demandes_team.xlsx');
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
 
-  const filtered = requests.filter(r =>
-    (r.profiles?.full_name || '').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.profiles?.email || '').toLowerCase().includes(filter.toLowerCase())
-  );
-
-  if (loading) return <div>Chargement...</div>;
-  
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold gold-text">Demandes Team Lion</h2>
-        <Button onClick={exportCSV} className="bg-gold/20 hover:bg-gold/30 text-gold border-gold/20">
-          Exporter Excel
-        </Button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-white">Demandes Team</h1>
+        <Badge variant="outline" className="text-gold border-gold">
+          {requests.filter(r => r.status === 'pending').length} En attente
+        </Badge>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <input
-          type="text"
-          placeholder="Recherche par nom/email"
-          className="flex-1 px-3 py-2 bg-black/50 border border-gold/20 rounded-lg text-white"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-        />
-      </div>
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="bg-gold/10 border-b border-gold/20">
-              <th className="text-left p-3 text-gold">Nom</th>
-              <th className="text-left p-3 text-gold">Email</th>
-              <th className="text-left p-3 text-gold">Téléphone</th>
-              <th className="text-left p-3 text-gold">Date</th>
-              <th className="text-left p-3 text-gold">Statut</th>
-              <th className="text-left p-3 text-gold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(r => (
-              <tr key={r.id} className="border-b border-gold/10 hover:bg-gold/5">
-                <td className="p-3">{r.profiles?.full_name || 'N/A'}</td>
-                <td className="p-3">{r.profiles?.email || 'N/A'}</td>
-                <td className="p-3">{r.profiles?.phone || 'N/A'}</td>
-                <td className="p-3">{new Date(r.created_at).toLocaleDateString()}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    r.status === 'approved' ? 'bg-green-500/20 text-green-500' :
-                    r.status === 'rejected' ? 'bg-red-500/20 text-red-500' :
-                    'bg-yellow-500/20 text-yellow-500'
-                  }`}>
-                    {r.status === 'approved' ? 'Approuvé' :
-                     r.status === 'rejected' ? 'Rejeté' :
-                     'En attente'}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => { setSelected(r); setModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
-                      Voir
-                    </Button>
-                    {r.status === 'pending' && (
-                      <>
-                        <Button onClick={() => handleAction(r.id, 'approved')} size="sm" className="bg-green-600 hover:bg-green-700">
-                          Accepter
-                        </Button>
-                        <Button onClick={() => handleAction(r.id, 'rejected')} size="sm" className="bg-red-600 hover:bg-red-700">
-                          Refuser
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      {filtered.length === 0 && (
-        <div className="text-center text-muted-foreground py-8">
-          Aucune demande trouvée
-        </div>
-      )}
-      
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-black border-gold/20">
-          <DialogTitle className="text-gold">Détail de la demande</DialogTitle>
-          {selected && (
-            <div className="space-y-3">
-              <div><strong>Nom :</strong> {selected.profiles?.full_name || 'N/A'}</div>
-              <div><strong>Email :</strong> {selected.profiles?.email || 'N/A'}</div>
-              <div><strong>Téléphone :</strong> {selected.profiles?.phone || 'N/A'}</div>
-              <div><strong>Statut :</strong> {selected.status}</div>
-              <div><strong>Date :</strong> {new Date(selected.created_at).toLocaleDateString()}</div>
-              
-              {selected.status === 'pending' && (
-                <div className="flex gap-2 mt-4">
-                  <Button 
-                    onClick={() => handleAction(selected.id, 'approved')}
-                    className="bg-green-600 hover:bg-green-700"
+      <div className="grid gap-6">
+        {requests.length === 0 ? (
+          <Card className="glass-effect border-gold/20">
+            <CardContent className="text-center py-12">
+              <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Aucune demande trouvée</p>
+            </CardContent>
+          </Card>
+        ) : (
+          requests.map((request) => (
+            <Card key={request.id} className="glass-effect border-gold/20">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-3">
+                    <User className="h-5 w-5" />
+                    {request.full_name || 'Nom non renseigné'}
+                  </CardTitle>
+                  <Badge
+                    variant={
+                      request.status === 'pending' ? 'default' :
+                      request.status === 'approved' ? 'default' : 'destructive'
+                    }
                   >
-                    Accepter
-                  </Button>
-                  <Button 
-                    onClick={() => handleAction(selected.id, 'rejected')}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Refuser
-                  </Button>
+                    {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                    {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
+                    {request.status === 'rejected' && <XCircle className="h-3 w-3 mr-1" />}
+                    {request.status === 'pending' ? 'En attente' :
+                     request.status === 'approved' ? 'Approuvée' : 'Rejetée'}
+                  </Badge>
                 </div>
-              )}
-            </div>
-          )}
-          <div className="flex gap-2 justify-end mt-4">
-            <Button variant="outline" onClick={() => setModalOpen(false)} className="border-gold/20">
-              Fermer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{request.email || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Téléphone</p>
+                      <p className="font-medium">{request.phone || 'Non renseigné'}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date de demande</p>
+                    <p className="font-medium">
+                      {new Date(request.created_at).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+
+                  {request.admin_notes && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Notes admin</p>
+                      <p className="font-medium">{request.admin_notes}</p>
+                    </div>
+                  )}
+
+                  {request.status === 'pending' && (
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        onClick={() => handleStatusUpdate(request.id, 'approved')}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approuver
+                      </Button>
+                      <Button
+                        onClick={() => handleStatusUpdate(request.id, 'rejected')}
+                        variant="destructive"
+                        className="flex-1"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Rejeter
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 };

@@ -58,7 +58,7 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert(orderData)
+        .insert([orderData])
         .select()
         .single();
 
