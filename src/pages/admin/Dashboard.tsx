@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, ShoppingBag, Package, DollarSign, Crown, TrendingUp } from 'lucide-react';
+import { Users, ShoppingBag, Package, DollarSign, Crown, TrendingUp, Store } from 'lucide-react';
 
 const Dashboard = () => {
   const [stats, setStats] = useState<any>({});
@@ -57,7 +57,10 @@ const Dashboard = () => {
     
     const { data: recentRequests } = await supabase
       .from('team_join_requests')
-      .select('*, profiles(full_name)')
+      .select(`
+        *,
+        profiles!team_join_requests_user_id_fkey(full_name)
+      `)
       .order('created_at', { ascending: false })
       .limit(5);
     
@@ -67,9 +70,9 @@ const Dashboard = () => {
         message: `Nouvelle commande #${order.order_number}`,
         time: order.created_at
       })),
-      ...(recentRequests || []).map(req => ({
+      ...(recentRequests || []).map((req: any) => ({
         type: 'team_request',
-        message: `Demande Team de ${req.profiles?.full_name}`,
+        message: `Demande Team de ${req.profiles?.full_name || 'Utilisateur'}`,
         time: req.created_at
       }))
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 10);
@@ -108,8 +111,8 @@ const Dashboard = () => {
         <Card className="glass-effect border-gold/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
-              <ShoppingBag className="h-4 w-4 mr-2 text-gold" />
-              Vendeurs
+              <Store className="h-4 w-4 mr-2 text-gold" />
+              Boutiques
             </CardTitle>
           </CardHeader>
           <CardContent>

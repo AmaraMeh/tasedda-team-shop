@@ -75,7 +75,7 @@ const HeroSection = () => {
             
             <div className="glass-effect rounded-lg p-6 border border-gold/20" data-aos="fade-up" data-aos-delay="300">
               <TrendingUp className="h-8 w-8 text-gold mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Boutiques Locales</h3>
+              <h3 className="text-lg font-semibold mb-2">Boutiques Tasedda</h3>
               <p className="text-muted-foreground text-sm">
                 Réseau de vendeurs partenaires à travers l'Algérie
               </p>

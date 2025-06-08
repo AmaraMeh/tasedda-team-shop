@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Crown, TrendingUp, Gift, Users, Star, CheckCircle } from 'lucide-react';
-import type { User as AuthUser } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Team = () => {
@@ -20,6 +19,9 @@ const Team = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [acceptRules, setAcceptRules] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -51,23 +53,28 @@ const Team = () => {
   const joinTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!fullName || !email || !phone) {
+      toast({ title: 'Veuillez remplir toutes les informations personnelles.' });
+      return;
+    }
     setDataLoading(true);
     try {
       // Vérifier si l'utilisateur possède déjà une boutique
-      const { data: shop } = await supabase
-        .from('shops')
+      const { data: seller } = await supabase
+        .from('sellers')
         .select('id')
-        .eq('owner_id', user.id)
+        .eq('user_id', user.id)
         .single();
-      if (shop) {
+      if (seller) {
         toast({
           title: "Impossible de rejoindre la Team",
-          description: "Vous possédez déjà une boutique sur Tasedda. Un vendeur ne peut pas être membre de la Team.",
+          description: "Vous possédez déjà une boutique sur Lion. Un vendeur ne peut pas être membre de la Team.",
           variant: "destructive",
         });
         setDataLoading(false);
         return;
       }
+      
       // Vérifier si déjà membre ou déjà une demande
       const { data: teamReq } = await supabase
         .from('team_join_requests')
@@ -88,19 +95,36 @@ const Team = () => {
         setDataLoading(false);
         return;
       }
+      
       // Désactiver le statut vendeur si existant
       await supabase.from('sellers').update({ is_active: false }).eq('user_id', user.id);
+      
       // Mettre à jour le profil avec les infos
-      await supabase.from('profiles').update({ full_name: user.user_metadata.full_name, email: user.user_metadata.email, phone: user.user_metadata.phone }).eq('id', user.id);
+      await supabase.from('profiles').update({ full_name: fullName, email, phone }).eq('id', user.id);
+      
+      // Trouver l'invitant si code fourni
+      let invitedBy = null;
+      if (inviteCode) {
+        const { data: inviter } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('promo_code', inviteCode)
+          .single();
+        if (inviter) {
+          invitedBy = inviter.id;
+        }
+      }
+      
       // Créer la demande d'adhésion
       const { error } = await supabase
         .from('team_join_requests')
         .insert({
           user_id: user.id,
           status: 'pending',
-          invited_by: null,
+          invited_by: invitedBy,
         });
       if (error) throw error;
+      
       toast({
         title: "Demande envoyée !",
         description: "Votre demande d'adhésion a été envoyée et sera examinée par l'administration.",
@@ -142,13 +166,13 @@ const Team = () => {
           <div className="text-center" data-aos="fade-up">
             <CheckCircle className="h-20 w-20 mx-auto mb-6 text-gold" />
             <h1 className="text-3xl font-display font-bold mb-4">
-              Vous êtes déjà membre de la <span className="gold-text">Team Tasedda</span> !
+              Vous êtes déjà membre de la <span className="gold-text">Team Lion</span> !
             </h1>
             <p className="text-muted-foreground mb-8">
-              Consultez votre profil pour voir vos statistiques et gérer vos commissions.
+              Consultez votre espace Team pour voir vos statistiques et gérer vos commissions.
             </p>
-            <Button onClick={() => navigate('/profile')} className="btn-gold">
-              Voir mon profil
+            <Button onClick={() => navigate('/team-space')} className="btn-gold">
+              Voir mon espace Team
             </Button>
           </div>
         </main>
@@ -167,7 +191,7 @@ const Team = () => {
         <section className="container mx-auto px-4 text-center mb-20" data-aos="fade-up">
           <Crown className="h-20 w-20 mx-auto mb-6 text-gold" />
           <h1 className="text-4xl lg:text-5xl font-display font-bold mb-6">
-            Rejoignez la <span className="gold-text">Team Tasedda</span>
+            Rejoignez la <span className="gold-text">Team Lion</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Devenez ambassadeur et gagnez des commissions jusqu'à 12% sur chaque vente réalisée avec votre code promo personnel.
@@ -273,7 +297,7 @@ const Team = () => {
             <Card className="glass-effect border-gold/20">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl gold-text">
-                  Rejoindre la Team
+                  Rejoindre la Team Lion
                 </CardTitle>
                 <p className="text-muted-foreground">
                   Commencez votre aventure d'ambassadeur dès aujourd'hui
@@ -282,18 +306,56 @@ const Team = () => {
               <CardContent>
                 <form onSubmit={joinTeam} className="space-y-4">
                   <div className="space-y-2">
+                    <Label htmlFor="fullName">Nom complet</Label>
+                    <Input
+                      id="fullName"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Votre nom complet"
+                      className="bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="votre@email.com"
+                      className="bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Téléphone</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+213xxxxxxxxx"
+                      className="bg-black/50 border-gold/20 focus:border-gold"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="inviteCode">Code d'invitation (optionnel)</Label>
                     <Input
                       id="inviteCode"
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      placeholder="ABC123"
+                      placeholder="LION1234"
                       className="bg-black/50 border-gold/20 focus:border-gold"
                     />
                     <p className="text-xs text-muted-foreground">
                       Si vous avez été invité par un membre, saisissez son code
                     </p>
                   </div>
+                  
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -304,12 +366,13 @@ const Team = () => {
                       required
                     />
                     <Label htmlFor="acceptRules" className="text-sm">
-                      J'accepte la <a href="/reglement" target="_blank" className="underline gold-text">loi du site</a>
+                      J'accepte les conditions d'utilisation
                     </Label>
                   </div>
+                  
                   <Button type="submit" className="w-full btn-gold" disabled={dataLoading || !acceptRules}>
                     <Crown className="h-4 w-4 mr-2" />
-                    {dataLoading ? "Inscription..." : "Rejoindre la Team"}
+                    {dataLoading ? "Inscription..." : "Rejoindre la Team Lion"}
                   </Button>
                 </form>
               </CardContent>

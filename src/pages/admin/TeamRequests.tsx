@@ -5,26 +5,38 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { utils, writeFile } from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
+import { TeamJoinRequest } from '@/types';
 
 const TeamRequests = () => {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<TeamJoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
-  const [selected, setSelected] = useState<any | null>(null);
+  const [selected, setSelected] = useState<TeamJoinRequest | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchRequests = async () => {
-      const { data } = await supabase
-        .from('team_join_requests')
-        .select('*, profiles:profiles!team_join_requests_user_id_fkey(full_name, email, phone)')
-        .order('created_at', { ascending: false });
-      setRequests(data || []);
-      setLoading(false);
-    };
     fetchRequests();
   }, []);
+
+  const fetchRequests = async () => {
+    const { data } = await supabase
+      .from('team_join_requests')
+      .select(`
+        *,
+        profiles:profiles!team_join_requests_user_id_fkey(full_name, email, phone)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      const typedData: TeamJoinRequest[] = data.map(item => ({
+        ...item,
+        status: item.status as 'pending' | 'approved' | 'rejected'
+      }));
+      setRequests(typedData);
+    }
+    setLoading(false);
+  };
 
   const handleAction = async (id: string, status: 'approved' | 'rejected') => {
     const req = requests.find(r => r.id === id);
@@ -54,20 +66,22 @@ const TeamRequests = () => {
     
     await supabase.from('team_join_requests').update({ status }).eq('id', id);
     
-    // Rafraîchir la liste
-    const { data } = await supabase
-      .from('team_join_requests')
-      .select('*, profiles:profiles!team_join_requests_user_id_fkey(full_name, email, phone)')
-      .order('created_at', { ascending: false });
-    setRequests(data || []);
     toast({ title: status === 'approved' ? 'Demande acceptée' : 'Demande refusée' });
+    fetchRequests();
+    setModalOpen(false);
   };
 
   const exportCSV = () => {
-    const ws = utils.json_to_sheet(requests);
+    const ws = utils.json_to_sheet(requests.map(r => ({
+      Nom: r.profiles?.full_name,
+      Email: r.profiles?.email,
+      Téléphone: r.profiles?.phone,
+      Statut: r.status,
+      Date: new Date(r.created_at).toLocaleDateString()
+    })));
     const wb = utils.book_new();
     utils.book_append_sheet(wb, ws, 'DemandesTeam');
-    writeFile(wb, 'demandes_team.csv');
+    writeFile(wb, 'demandes_team.xlsx');
   };
 
   const filtered = requests.filter(r =>
@@ -88,7 +102,7 @@ const TeamRequests = () => {
           onChange={e => setFilter(e.target.value)}
         />
         <Button onClick={exportCSV} className="bg-gold/20 hover:bg-gold/30 text-gold border-gold/20">
-          Exporter CSV
+          Exporter Excel
         </Button>
       </div>
       
@@ -151,7 +165,6 @@ const TeamRequests = () => {
         </div>
       )}
       
-      {/* Modal de détails */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="bg-black border-gold/20">
           <DialogTitle className="text-gold">Détail de la demande</DialogTitle>
