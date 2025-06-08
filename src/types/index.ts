@@ -117,3 +117,32 @@ export interface Seller {
     phone: string;
   };
 }
+
+export interface CartItem {
+  id: string;
+  product: Product;
+  quantity: number;
+  size?: string;
+  color?: string;
+}
+
+export interface Order {
+  id: string;
+  order_number: string;
+  user_id?: string;
+  total_amount: number;
+  discount_amount?: number;
+  promo_code?: string;
+  payment_method: 'cash_on_delivery' | 'baridimob';
+  payment_status: 'pending' | 'paid' | 'failed';
+  order_status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
+  shipping_address: {
+    full_name: string;
+    phone: string;
+    address: string;
+    city: string;
+    wilaya: string;
+  };
+  created_at: string;
+  updated_at: string;
+}

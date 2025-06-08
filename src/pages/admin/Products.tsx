@@ -31,9 +31,20 @@ const Products = () => {
   const fetchProducts = async () => {
     const { data } = await supabase
       .from('products')
-      .select('*')
+      .select(`
+        *,
+        categories(name)
+      `)
       .order('created_at', { ascending: false });
-    setProducts(data || []);
+    
+    if (data) {
+      const productsWithCategory = data.map(item => ({
+        ...item,
+        category: item.categories?.name || 'Sans catégorie',
+        inStock: item.stock_quantity ? item.stock_quantity > 0 : true
+      }));
+      setProducts(productsWithCategory);
+    }
   };
 
   const fetchCategories = async () => {
@@ -67,11 +78,25 @@ const Products = () => {
     e.preventDefault();
     
     try {
+      const productData = {
+        name: formData.name || '',
+        description: formData.description || '',
+        price: formData.price || 0,
+        original_price: formData.original_price,
+        image_url: formData.image_url || '',
+        category_id: formData.category_id,
+        stock_quantity: formData.stock_quantity || 0,
+        is_featured: formData.is_featured || false,
+        sizes: formData.sizes || [],
+        colors: formData.colors || [],
+        is_active: true
+      };
+
       if (editMode && selected) {
         const { error } = await supabase
           .from('products')
           .update({
-            ...formData,
+            ...productData,
             updated_at: new Date().toISOString()
           })
           .eq('id', selected.id);
@@ -82,8 +107,7 @@ const Products = () => {
         const { error } = await supabase
           .from('products')
           .insert({
-            ...formData,
-            is_active: true,
+            ...productData,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
@@ -109,7 +133,7 @@ const Products = () => {
       price: 0,
       original_price: 0,
       image_url: '',
-      category: '',
+      category_id: '',
       stock_quantity: 0,
       is_featured: false,
       sizes: [],
@@ -120,7 +144,10 @@ const Products = () => {
   };
 
   const openEditModal = (product: Product) => {
-    setFormData(product);
+    setFormData({
+      ...product,
+      category_id: categories.find(cat => cat.name === product.category)?.id || ''
+    });
     setSelected(product);
     setEditMode(true);
     setModalOpen(true);
@@ -241,15 +268,15 @@ const Products = () => {
               <div className="space-y-2">
                 <Label htmlFor="category">Catégorie</Label>
                 <Select 
-                  value={formData.category || ''} 
-                  onValueChange={(value) => setFormData({...formData, category: value})}
+                  value={formData.category_id || ''} 
+                  onValueChange={(value) => setFormData({...formData, category_id: value})}
                 >
                   <SelectTrigger className="bg-black/50 border-gold/20">
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.name}>
+                      <SelectItem key={cat.id} value={cat.id}>
                         {cat.name}
                       </SelectItem>
                     ))}

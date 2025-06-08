@@ -9,22 +9,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Filter, ShoppingCart, Star, Package } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Star, Package, Heart } from 'lucide-react';
 import { Product, Category } from '@/types';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<string>('all');
   const { toast } = useToast();
+  const { addToCart } = useCart();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-  }, []);
+    if (user) {
+      loadFavorites();
+    }
+  }, [user]);
 
   const fetchProducts = async () => {
     try {
@@ -36,12 +44,17 @@ const Products = () => {
 
       if (error) throw error;
       
-      const productsWithDefaults = data?.map(product => ({
-        ...product,
-        category: product.category || 'Général',
-        inStock: product.stock_quantity ? product.stock_quantity > 0 : true,
-        is_featured: product.is_featured || false
-      })) || [];
+      const productsWithDefaults = data?.map(product => {
+        // Récupérer le nom de la catégorie depuis categories table
+        const categoryName = categories.find(cat => cat.id === product.category_id)?.name || 'Général';
+        
+        return {
+          ...product,
+          category: categoryName,
+          inStock: product.stock_quantity ? product.stock_quantity > 0 : true,
+          is_featured: product.is_featured || false
+        };
+      }) || [];
       
       setProducts(productsWithDefaults);
     } catch (error: any) {
@@ -71,6 +84,36 @@ const Products = () => {
     }
   };
 
+  const loadFavorites = () => {
+    const saved = localStorage.getItem(`favorites_${user?.id}`);
+    if (saved) {
+      setFavorites(JSON.parse(saved));
+    }
+  };
+
+  const toggleFavorite = (productId: string) => {
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Connectez-vous pour ajouter des favoris",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newFavorites = favorites.includes(productId)
+      ? favorites.filter(id => id !== productId)
+      : [...favorites, productId];
+    
+    setFavorites(newFavorites);
+    localStorage.setItem(`favorites_${user.id}`, JSON.stringify(newFavorites));
+    
+    toast({
+      title: favorites.includes(productId) ? "Retiré des favoris" : "Ajouté aux favoris",
+      description: "Produit mis à jour dans vos favoris",
+    });
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -86,8 +129,8 @@ const Products = () => {
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
-  const addToCart = (product: Product) => {
-    // Ajouter au panier (à implémenter)
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
     toast({
       title: "Ajouté au panier",
       description: `${product.name} a été ajouté à votre panier`,
@@ -187,6 +230,16 @@ const Products = () => {
                     alt={product.name}
                     className="w-full h-48 object-cover"
                   />
+                  {user && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2 p-2 h-auto bg-black/20 hover:bg-black/40"
+                      onClick={() => toggleFavorite(product.id)}
+                    >
+                      <Heart className={`h-4 w-4 ${favorites.includes(product.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                    </Button>
+                  )}
                   {product.is_featured && (
                     <Badge className="absolute top-2 left-2 bg-gold text-black">
                       <Star className="h-3 w-3 mr-1" />
@@ -194,7 +247,7 @@ const Products = () => {
                     </Badge>
                   )}
                   {!product.inStock && (
-                    <Badge variant="destructive" className="absolute top-2 right-2">
+                    <Badge variant="destructive" className="absolute bottom-2 right-2">
                       Rupture
                     </Badge>
                   )}
@@ -230,7 +283,7 @@ const Products = () => {
                       <Button
                         size="sm"
                         className="btn-gold"
-                        onClick={() => addToCart(product)}
+                        onClick={() => handleAddToCart(product)}
                         disabled={!product.inStock}
                       >
                         <ShoppingCart className="h-4 w-4 mr-1" />
