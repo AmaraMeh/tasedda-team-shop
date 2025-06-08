@@ -1,276 +1,184 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { User, LogOut, ShoppingBag, Menu, X, Crown, Store, Shield } from 'lucide-react';
-import type { User as AuthUser } from '@supabase/supabase-js';
+import { Menu, X, User, ShoppingBag, Crown, Store } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Header = () => {
-  const { user, loading } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [userType, setUserType] = useState<'team' | 'seller' | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeamMember, setIsTeamMember] = useState(false);
+  const [isSeller, setIsSeller] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && user) {
-      checkUserType(user.id);
-    } else if (!loading && !user) {
-      setUserType(null);
+    if (user) {
+      checkUserRoles(user.id);
     }
-  }, [user, loading]);
+  }, [user]);
 
-  const checkUserType = async (userId: string) => {
-    try {
-      // Vérifier si l'utilisateur est un membre d'équipe
-      const { data: teamMember } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
+  const checkUserRoles = async (userId: string) => {
+    // Vérifier si admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', userId)
+      .single();
+    setIsAdmin(profile?.is_admin || false);
 
-      // Vérifier si l'utilisateur est un vendeur
-      const { data: seller } = await supabase
-        .from('sellers')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
+    // Vérifier si membre de la team
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+    setIsTeamMember(!!teamMember);
 
-      if (teamMember && seller) {
-        setUserType('team'); // Priorité à Team si les deux existent
-      } else if (teamMember) {
-        setUserType('team');
-      } else if (seller) {
-        setUserType('seller');
-      } else {
-        setUserType(null);
-      }
-    } catch (error) {
-      console.error('Error checking user type:', error);
-    }
+    // Vérifier si vendeur
+    const { data: seller } = await supabase
+      .from('sellers')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+    setIsSeller(!!seller);
   };
 
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Déconnexion réussie",
-        description: "À bientôt sur Tasedda !",
-      });
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Erreur de déconnexion",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getDashboardLink = () => {
-    if (userType === 'team') return '/team-space';
-    if (userType === 'seller') return '/seller-space';
-    return '/profile';
-  };
-
-  const getDashboardLabel = () => {
-    if (userType === 'team') return 'Espace Team';
-    if (userType === 'seller') return 'Espace Vendeur';
-    return 'Mon Profil';
-  };
-
-  const getDashboardIcon = () => {
-    if (userType === 'team') return <Crown className="h-4 w-4" />;
-    if (userType === 'seller') return <Store className="h-4 w-4" />;
-    return <User className="h-4 w-4" />;
-  };
+  const navLinks = [
+    { href: '/', label: 'Accueil' },
+    { href: '/products', label: 'Produits' },
+    { href: '/about', label: 'À propos' },
+    { href: '/contact', label: 'Contact' },
+  ];
 
   return (
-    <header className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
-      <nav className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-gold/20">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="gold-gradient h-10 w-10 rounded-lg flex items-center justify-center">
-              <span className="text-black font-bold text-xl">T</span>
-            </div>
-            <span className="font-display text-2xl font-bold gold-text">Tasedda</span>
+            <Crown className="h-8 w-8 text-gold" />
+            <span className="text-2xl font-display font-bold gold-text">Lion</span>
+            <span className="text-sm text-muted-foreground hidden sm:block">by Tasedda</span>
           </Link>
 
           {/* Navigation Desktop */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              to="/" 
-              className="text-foreground hover:text-primary transition-colors font-medium"
-            >
-              Accueil
-            </Link>
-            <Link 
-              to="/team" 
-              className="text-foreground hover:text-primary transition-colors font-medium flex items-center"
-            >
-              <Crown className="h-4 w-4 mr-1" />
-              Team Tasedda
-            </Link>
-            <Link 
-              to="/seller" 
-              className="text-foreground hover:text-primary transition-colors font-medium flex items-center"
-            >
-              <Store className="h-4 w-4 mr-1" />
-              Devenir Vendeur
-            </Link>
-          </div>
+          <nav className="hidden md:flex items-center space-x-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-white/80 hover:text-gold transition-colors font-medium"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
           {/* Actions */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
             {user ? (
-              <div className="flex items-center space-x-4">
-                <Button variant="outline" size="sm">
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  Panier
-                  <Badge variant="secondary" className="ml-2">0</Badge>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
+              <div className="flex items-center space-x-2">
+                {isAdmin && (
+                  <Button
+                    onClick={() => navigate('/admin')}
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Admin
+                  </Button>
+                )}
+                {isTeamMember && (
+                  <Button
+                    onClick={() => navigate('/team-space')}
+                    size="sm"
+                    className="bg-gold/20 hover:bg-gold/30 text-gold border-gold/20"
+                  >
+                    <Crown className="h-4 w-4 mr-1" />
+                    Team
+                  </Button>
+                )}
+                {isSeller && (
+                  <Button
+                    onClick={() => navigate('/seller-space')}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Store className="h-4 w-4 mr-1" />
+                    Boutique
+                  </Button>
+                )}
+                <Button
+                  onClick={() => navigate('/profile')}
                   size="sm"
-                  onClick={() => navigate(getDashboardLink())}
-                  className="flex items-center"
+                  variant="outline"
+                  className="border-gold/20 text-gold hover:bg-gold/10"
                 >
-                  {getDashboardIcon()}
-                  <span className="ml-2">{getDashboardLabel()}</span>
-                  {userType && (
-                    <Badge variant="secondary" className="ml-2">
-                      {userType === 'team' ? 'Team' : 'Vendeur'}
-                    </Badge>
-                  )}
-                </Button>
-                
-                <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
-                </Button>
-
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/admin')}
-                  className="text-gold/60 hover:text-gold"
-                >
-                  <Shield className="h-4 w-4" />
+                  <User className="h-4 w-4 mr-1" />
+                  Profil
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Button variant="outline" onClick={() => navigate('/auth')}>
-                  Connexion
+              <div className="flex items-center space-x-2">
+                <Button
+                  onClick={() => navigate('/team')}
+                  size="sm"
+                  className="bg-gold/20 hover:bg-gold/30 text-gold border-gold/20"
+                >
+                  <Crown className="h-4 w-4 mr-1" />
+                  Rejoindre Team
                 </Button>
-                <Button className="btn-gold" onClick={() => navigate('/auth')}>
-                  Inscription
+                <Button
+                  onClick={() => navigate('/seller')}
+                  size="sm"
+                  variant="outline"
+                  className="border-gold/20 text-gold hover:bg-gold/10"
+                >
+                  <Store className="h-4 w-4 mr-1" />
+                  Vendre
+                </Button>
+                <Button
+                  onClick={() => navigate('/auth')}
+                  size="sm"
+                  className="btn-gold"
+                >
+                  <User className="h-4 w-4 mr-1" />
+                  Connexion
                 </Button>
               </div>
             )}
-          </div>
 
-          {/* Menu Mobile */}
-          <div className="md:hidden">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            {/* Menu Mobile */}
+            <button
+              className="md:hidden p-2 text-white/80 hover:text-gold"
+              onClick={() => setIsOpen(!isOpen)}
             >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
 
-        {/* Menu Mobile Ouvert */}
-        {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-border pt-4">
-            <div className="flex flex-col space-y-4">
-              <Link 
-                to="/" 
-                className="text-foreground hover:text-primary transition-colors font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Accueil
-              </Link>
-              <Link 
-                to="/team" 
-                className="text-foreground hover:text-primary transition-colors font-medium flex items-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Crown className="h-4 w-4 mr-1" />
-                Team Tasedda
-              </Link>
-              <Link 
-                to="/seller" 
-                className="text-foreground hover:text-primary transition-colors font-medium flex items-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Store className="h-4 w-4 mr-1" />
-                Devenir Vendeur
-              </Link>
-              
-              {user ? (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="justify-start"
-                    onClick={() => {
-                      navigate(getDashboardLink());
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    {getDashboardIcon()}
-                    <span className="ml-2">{getDashboardLabel()}</span>
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="justify-start"
-                    onClick={() => {
-                      handleSignOut();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Déconnexion
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline" 
-                    className="justify-start"
-                    onClick={() => {
-                      navigate('/auth');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Connexion
-                  </Button>
-                  <Button 
-                    className="btn-gold justify-start"
-                    onClick={() => {
-                      navigate('/auth');
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    Inscription
-                  </Button>
-                </>
-              )}
-            </div>
+        {/* Menu Mobile */}
+        {isOpen && (
+          <div className="md:hidden bg-black/95 border-t border-gold/20 py-4">
+            <nav className="flex flex-col space-y-4">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-white/80 hover:text-gold transition-colors px-4 py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
         )}
-      </nav>
+      </div>
     </header>
   );
 };

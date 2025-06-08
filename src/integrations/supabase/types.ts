@@ -48,6 +48,7 @@ export type Database = {
           percentage: number
           status: string | null
           team_member_id: string
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -57,6 +58,7 @@ export type Database = {
           percentage: number
           status?: string | null
           team_member_id: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -66,6 +68,7 @@ export type Database = {
           percentage?: number
           status?: string | null
           team_member_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -80,6 +83,13 @@ export type Database = {
             columns: ["team_member_id"]
             isOneToOne: false
             referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_commissions_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -185,6 +195,51 @@ export type Database = {
           },
         ]
       }
+      primes: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invited_id: string | null
+          inviter_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invited_id?: string | null
+          inviter_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invited_id?: string | null
+          inviter_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primes_invited_id_fkey"
+            columns: ["invited_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "primes_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string | null
@@ -265,7 +320,9 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_admin: boolean | null
           phone: string | null
+          role: string | null
           updated_at: string | null
         }
         Insert: {
@@ -275,7 +332,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_admin?: boolean | null
           phone?: string | null
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -285,7 +344,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean | null
           phone?: string | null
+          role?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -299,6 +360,7 @@ export type Database = {
           is_active: boolean | null
           monthly_fee: number | null
           slug: string
+          status: string | null
           subscription_expires_at: string | null
           subscription_status: string | null
           updated_at: string | null
@@ -312,6 +374,7 @@ export type Database = {
           is_active?: boolean | null
           monthly_fee?: number | null
           slug: string
+          status?: string | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
           updated_at?: string | null
@@ -325,6 +388,7 @@ export type Database = {
           is_active?: boolean | null
           monthly_fee?: number | null
           slug?: string
+          status?: string | null
           subscription_expires_at?: string | null
           subscription_status?: string | null
           updated_at?: string | null
@@ -333,6 +397,124 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sellers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shops: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          slug: string
+          status: string | null
+          subscription_end_date: string | null
+          subscription_status: string
+          trial_end_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          slug: string
+          status?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string
+          trial_end_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          status?: string | null
+          subscription_end_date?: string | null
+          subscription_status?: string
+          trial_end_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_join_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          invited_by: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_team_join_requests_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_requests_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_requests_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -397,107 +579,6 @@ export type Database = {
           },
         ]
       }
-      team_join_requests: {
-        Row: {
-          id: string
-          user_id: string
-          status: 'pending' | 'approved' | 'rejected'
-          created_at: string
-          updated_at: string | null
-          admin_notes: string | null
-          invited_by: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          status?: 'pending' | 'approved' | 'rejected'
-          created_at?: string
-          updated_at?: string | null
-          admin_notes?: string | null
-          invited_by?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          status?: 'pending' | 'approved' | 'rejected'
-          created_at?: string
-          updated_at?: string | null
-          admin_notes?: string | null
-          invited_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_join_requests_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_join_requests_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "team_members"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      shops: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          slug: string
-          description: string | null
-          logo_url: string | null
-          cover_url: string | null
-          is_active: boolean
-          subscription_status: 'trial' | 'active' | 'expired'
-          trial_end_date: string | null
-          subscription_end_date: string | null
-          created_at: string
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          slug: string
-          description?: string | null
-          logo_url?: string | null
-          cover_url?: string | null
-          is_active?: boolean
-          subscription_status?: 'trial' | 'active' | 'expired'
-          trial_end_date?: string | null
-          subscription_end_date?: string | null
-          created_at?: string
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          slug?: string
-          description?: string | null
-          logo_url?: string | null
-          cover_url?: string | null
-          is_active?: boolean
-          subscription_status?: 'trial' | 'active' | 'expired'
-          trial_end_date?: string | null
-          subscription_end_date?: string | null
-          created_at?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shops_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       withdrawal_requests: {
         Row: {
           admin_notes: string | null
@@ -543,6 +624,10 @@ export type Database = {
     Functions: {
       generate_promo_code: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_shop_slug: {
+        Args: { name: string }
         Returns: string
       }
     }
