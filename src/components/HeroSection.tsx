@@ -1,9 +1,16 @@
-
 import { Button } from '@/components/ui/button';
-import { Crown, Star, TrendingUp } from 'lucide-react';
+import { Crown, Star, TrendingUp, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
-const HeroSection = () => {
+interface HeroSectionProps {
+  showTeamCTA?: boolean;
+  showSellerCTA?: boolean;
+}
+
+const HeroSection = ({ showTeamCTA = true, showSellerCTA = true }: HeroSectionProps) => {
+  const { t } = useTranslation();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-black to-gold/10 overflow-hidden">
       {/* Decorative elements */}
@@ -17,39 +24,46 @@ const HeroSection = () => {
             <Crown className="h-16 w-16 text-gold mr-4" />
             <div>
               <h1 className="text-6xl lg:text-8xl font-display font-bold gold-text leading-none">
-                Lion
+                {t('home.hero.title')}
               </h1>
             </div>
           </div>
 
           {/* Tagline */}
           <h2 className="text-2xl lg:text-4xl font-semibold mb-6 text-white/90">
-            E-commerce Premium de Vêtements en Algérie
+            {t('home.hero.subtitle')}
           </h2>
           
           <p className="text-lg lg:text-xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
-            Découvrez une expérience shopping unique avec notre sélection de vêtements premium, 
-            notre système d'affiliation Team Lion, et nos boutiques Tasedda partenaires locales.
+            {t('home.hero.description')}
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link to="/products">
-              <Button size="lg" className="btn-gold px-8 py-4 text-lg">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Découvrir nos produits
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button asChild size="lg" className="btn-gold">
+              <Link to="/products">
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                {t('common.products')}
+              </Link>
+            </Button>
+            
+            {showTeamCTA && (
+              <Button asChild variant="outline" size="lg" className="border-gold/20 text-gold">
+                <Link to="/team">
+                  <Crown className="h-5 w-5 mr-2" />
+                  {t('common.joinTeam')}
+                </Link>
               </Button>
-            </Link>
-            <Link to="/team">
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="border-gold/40 text-gold hover:bg-gold/10 px-8 py-4 text-lg"
-              >
-                <Crown className="h-5 w-5 mr-2" />
-                Rejoindre Team Lion
+            )}
+            
+            {showSellerCTA && (
+              <Button asChild variant="outline" size="lg" className="border-gold/20 text-gold">
+                <Link to="/seller">
+                  <TrendingUp className="h-5 w-5 mr-2" />
+                  {t('common.becomeSeller')}
+                </Link>
               </Button>
-            </Link>
+            )}
           </div>
 
           {/* Features */}

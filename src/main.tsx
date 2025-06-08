@@ -1,7 +1,8 @@
-
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+import './i18n';
 import AOS from 'aos'
 
 // Initialize AOS
@@ -11,4 +12,8 @@ AOS.init({
   offset: 100
 });
 
-createRoot(document.getElementById("root")!).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

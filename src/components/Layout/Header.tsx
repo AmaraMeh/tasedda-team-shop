@@ -1,17 +1,19 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { ShoppingCart, User, LogOut, Menu, X } from 'lucide-react';
 import Cart from '../Cart';
 import Checkout from '../Checkout';
+import LanguageSelector from '../LanguageSelector';
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const { getCartCount } = useCart();
+  const { t } = useTranslation();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -92,15 +94,15 @@ const Header = () => {
             {/* Navigation Desktop */}
             <nav className="hidden md:flex items-center space-x-8">
               <Link to="/products" className="text-white hover:text-gold transition-colors">
-                Produits
+                {t('common.products')}
               </Link>
               {userRole !== 'team' && userRole !== 'seller' && (
                 <>
                   <Link to="/team" className="text-white hover:text-gold transition-colors">
-                    Rejoindre Team
+                    {t('common.joinTeam')}
                   </Link>
                   <Link to="/seller" className="text-white hover:text-gold transition-colors">
-                    Devenir Vendeur
+                    {t('common.becomeSeller')}
                   </Link>
                 </>
               )}
@@ -108,6 +110,9 @@ const Header = () => {
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
+              {/* Language Selector */}
+              <LanguageSelector />
+
               {/* Cart */}
               <Button
                 variant="ghost"
@@ -128,17 +133,17 @@ const Header = () => {
                 <div className="hidden md:flex items-center space-x-2">
                   {userRole === 'admin' && (
                     <Button asChild variant="outline" size="sm" className="border-gold/20 text-gold">
-                      <Link to="/admin">Admin</Link>
+                      <Link to="/admin">{t('common.admin')}</Link>
                     </Button>
                   )}
                   {userRole === 'team' && (
                     <Button asChild variant="outline" size="sm" className="border-gold/20 text-gold">
-                      <Link to="/team-space">Espace Team</Link>
+                      <Link to="/team-space">{t('common.teamSpace')}</Link>
                     </Button>
                   )}
                   {userRole === 'seller' && (
                     <Button asChild variant="outline" size="sm" className="border-gold/20 text-gold">
-                      <Link to="/seller-space">Espace Vendeur</Link>
+                      <Link to="/seller-space">{t('common.sellerSpace')}</Link>
                     </Button>
                   )}
                   <Button asChild variant="ghost" size="sm" className="text-white hover:text-gold">
@@ -158,10 +163,10 @@ const Header = () => {
               ) : (
                 <div className="hidden md:flex items-center space-x-2">
                   <Button asChild variant="ghost" size="sm" className="text-white hover:text-gold">
-                    <Link to="/auth">Connexion</Link>
+                    <Link to="/auth">{t('common.login')}</Link>
                   </Button>
                   <Button asChild size="sm" className="btn-gold">
-                    <Link to="/auth">Inscription</Link>
+                    <Link to="/auth">{t('common.register')}</Link>
                   </Button>
                 </div>
               )}
@@ -187,7 +192,7 @@ const Header = () => {
                   className="text-white hover:text-gold transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Produits
+                  {t('common.products')}
                 </Link>
                 {userRole !== 'team' && userRole !== 'seller' && (
                   <>
@@ -196,14 +201,14 @@ const Header = () => {
                       className="text-white hover:text-gold transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Rejoindre Team
+                      {t('common.joinTeam')}
                     </Link>
                     <Link
                       to="/seller"
                       className="text-white hover:text-gold transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      Devenir Vendeur
+                      {t('common.becomeSeller')}
                     </Link>
                   </>
                 )}
@@ -213,28 +218,28 @@ const Header = () => {
                     {userRole === 'admin' && (
                       <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
                         <Button variant="outline" size="sm" className="w-full border-gold/20 text-gold">
-                          Admin
+                          {t('common.admin')}
                         </Button>
                       </Link>
                     )}
                     {userRole === 'team' && (
                       <Link to="/team-space" onClick={() => setIsMenuOpen(false)}>
                         <Button variant="outline" size="sm" className="w-full border-gold/20 text-gold">
-                          Espace Team
+                          {t('common.teamSpace')}
                         </Button>
                       </Link>
                     )}
                     {userRole === 'seller' && (
                       <Link to="/seller-space" onClick={() => setIsMenuOpen(false)}>
                         <Button variant="outline" size="sm" className="w-full border-gold/20 text-gold">
-                          Espace Vendeur
+                          {t('common.sellerSpace')}
                         </Button>
                       </Link>
                     )}
                     <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
                       <Button variant="ghost" size="sm" className="w-full text-white hover:text-gold justify-start">
                         <User className="h-4 w-4 mr-2" />
-                        Profil
+                        {t('common.profile')}
                       </Button>
                     </Link>
                     <Button
@@ -247,19 +252,19 @@ const Header = () => {
                       className="w-full text-white hover:text-gold justify-start"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
-                      Déconnexion
+                      {t('common.logout')}
                     </Button>
                   </div>
                 ) : (
                   <div className="flex flex-col space-y-2 pt-4 border-t border-gold/20">
                     <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                       <Button variant="ghost" size="sm" className="w-full text-white hover:text-gold">
-                        Connexion
+                        {t('common.login')}
                       </Button>
                     </Link>
                     <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                       <Button size="sm" className="w-full btn-gold">
-                        Inscription
+                        {t('common.register')}
                       </Button>
                     </Link>
                   </div>

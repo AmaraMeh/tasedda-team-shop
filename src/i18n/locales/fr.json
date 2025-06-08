@@ -1,0 +1,26 @@
+{
+  "common": {
+    "products": "Produits",
+    "joinTeam": "Rejoindre Team",
+    "becomeSeller": "Devenir Vendeur",
+    "login": "Connexion",
+    "register": "Inscription",
+    "profile": "Profil",
+    "logout": "Déconnexion",
+    "cart": "Panier",
+    "admin": "Admin",
+    "teamSpace": "Espace Team",
+    "sellerSpace": "Espace Vendeur"
+  },
+  "home": {
+    "hero": {
+      "title": "Lion",
+      "subtitle": "E-commerce Premium de Vêtements en Algérie",
+      "description": "Découvrez une expérience shopping unique avec notre sélection de vêtements premium, notre système d'affiliation Team Lion, et nos boutiques Tasedda partenaires locales."
+    },
+    "featuredProducts": {
+      "title": "Produits Vedettes",
+      "subtitle": "Découvrez notre sélection de produits populaires"
+    }
+  }
+} 

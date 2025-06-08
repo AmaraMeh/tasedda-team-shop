@@ -1,10 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import HeroSection from '@/components/HeroSection';
 import ProductCard from '@/components/ProductCard';
 import Footer from '@/components/Layout/Footer';
+import Header from '@/components/Layout/Header';
 import { Product } from '@/types';
 
 const Index = () => {
@@ -85,6 +85,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-black">
+      <Header />
       <HeroSection showTeamCTA={userRole !== 'team'} showSellerCTA={userRole !== 'seller'} />
       
       {/* Featured Products Section */}
