@@ -1,3 +1,4 @@
+
 {
   "common": {
     "products": "المنتجات",
@@ -10,7 +11,25 @@
     "cart": "سلة التسوق",
     "admin": "المدير",
     "teamSpace": "مساحة الفريق",
-    "sellerSpace": "مساحة البائع"
+    "sellerSpace": "مساحة البائع",
+    "backToHome": "العودة للرئيسية",
+    "submit": "إرسال",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "confirm": "تأكيد",
+    "search": "بحث",
+    "filter": "تصفية",
+    "sort": "ترتيب",
+    "loading": "جار التحميل...",
+    "error": "خطأ",
+    "success": "نجح",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "address": "العنوان",
+    "city": "المدينة",
+    "wilaya": "الولاية"
   },
   "home": {
     "hero": {
@@ -22,5 +41,74 @@
       "title": "المنتجات المميزة",
       "subtitle": "اكتشف مجموعتنا من المنتجات الشائعة"
     }
+  },
+  "footer": {
+    "description": "وجهتك الأولى للأزياء الراقية في الجزائر. اكتشف ملابس عالية الجودة مع نظام الانتساب الفريد لدينا.",
+    "shop": "المتجر",
+    "team": "فريق تاسعدة",
+    "support": "الدعم",
+    "contributorOfMonth": "المساهم للشهر",
+    "upcomingEvent": "الحدث القادم",
+    "copyright": "جميع الحقوق محفوظة. صُنع بـ ❤️ في الجزائر"
+  },
+  "team": {
+    "title": "انضم إلى فريق ليون",
+    "description": "انضم إلى فريقنا واستفد من العمولات الحصرية",
+    "joinTeam": "انضم للفريق",
+    "advantages": "المزايا",
+    "commissions": "العمولات",
+    "advantagesTitle": "مزايا فريق ليون",
+    "advantagesDesc": "اكتشف جميع فوائد كونك جزءاً من فريقنا",
+    "commissionsTitle": "نظام العمولات",
+    "commissionsDesc": "احصل على عمولات من كل عملية بيع",
+    "benefits": {
+      "commission": "عمولة 5% على جميع المبيعات",
+      "promoCode": "كود خصم شخصي",
+      "support": "دعم مخصص",
+      "training": "تدريب مجاني",
+      "community": "مجتمع نشط"
+    }
+  },
+  "seller": {
+    "title": "كن بائعاً",
+    "description": "افتح متجرك الإلكتروني مع ليون",
+    "becomeSeller": "كن بائعاً",
+    "pricing": "700 دج/شهر بعد التجربة المجانية",
+    "features": {
+      "shop": "متجر مخصص",
+      "commission": "0% عمولة",
+      "support": "دعم تقني",
+      "analytics": "إحصائيات مفصلة"
+    }
+  },
+  "support": {
+    "helpCenter": "مركز المساعدة",
+    "contact": "اتصل بنا",
+    "shipping": "الشحن",
+    "returns": "الإرجاع",
+    "helpTitle": "مركز المساعدة",
+    "helpDesc": "اعثر على إجابات لأسئلتك",
+    "contactTitle": "اتصل بنا",
+    "contactDesc": "فريقنا هنا لمساعدتك",
+    "shippingTitle": "معلومات الشحن",
+    "shippingDesc": "كل ما تحتاج معرفته عن طرق الشحن لدينا",
+    "returnsTitle": "سياسة الإرجاع",
+    "returnsDesc": "شروط الإرجاع والاستبدال",
+    "faq": "الأسئلة الشائعة",
+    "email": "support@lion-dz.com",
+    "phone": "+213 XXX XXX XXX",
+    "workingHours": "الإثنين-الجمعة: 9ص-5م"
+  },
+  "admin": {
+    "homepageContent": "محتوى الصفحة الرئيسية",
+    "contributorTitle": "المساهم للشهر",
+    "eventTitle": "الحدث القادم",
+    "manageHomepage": "إدارة محتوى الصفحة الرئيسية",
+    "activeContent": "المحتوى النشط",
+    "contributor": "مساهم",
+    "event": "حدث",
+    "sales": "مبيعات",
+    "eventDate": "تاريخ الحدث",
+    "eventLocation": "مكان الحدث"
   }
-} 
+}

@@ -1,3 +1,4 @@
+
 {
   "common": {
     "products": "Produits",
@@ -10,7 +11,25 @@
     "cart": "Panier",
     "admin": "Admin",
     "teamSpace": "Espace Team",
-    "sellerSpace": "Espace Vendeur"
+    "sellerSpace": "Espace Vendeur",
+    "backToHome": "Retour à l'accueil",
+    "submit": "Envoyer",
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "confirm": "Confirmer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "phone": "Téléphone",
+    "email": "Email",
+    "address": "Adresse",
+    "city": "Ville",
+    "wilaya": "Wilaya"
   },
   "home": {
     "hero": {
@@ -22,5 +41,74 @@
       "title": "Produits Vedettes",
       "subtitle": "Découvrez notre sélection de produits populaires"
     }
+  },
+  "footer": {
+    "description": "Votre destination premium pour la mode en Algérie. Découvrez des vêtements de qualité avec notre système d'affiliation unique.",
+    "shop": "Boutique",
+    "team": "Team Tasedda",
+    "support": "Support",
+    "contributorOfMonth": "Contributeur du Mois",
+    "upcomingEvent": "Événement à Venir",
+    "copyright": "Tous droits réservés. Made with ❤️ in Algeria"
+  },
+  "team": {
+    "title": "Rejoindre Team Lion",
+    "description": "Rejoignez notre équipe et bénéficiez de commissions exclusives",
+    "joinTeam": "Rejoindre la Team",
+    "advantages": "Avantages",
+    "commissions": "Commissions",
+    "advantagesTitle": "Avantages Team Lion",
+    "advantagesDesc": "Découvrez tous les avantages de faire partie de notre équipe",
+    "commissionsTitle": "Système de Commissions",
+    "commissionsDesc": "Gagnez des commissions sur chaque vente réalisée",
+    "benefits": {
+      "commission": "Commission de 5% sur toutes les ventes",
+      "promoCode": "Code promo personnel",
+      "support": "Support dédié",
+      "training": "Formation gratuite",
+      "community": "Communauté active"
+    }
+  },
+  "seller": {
+    "title": "Devenir Vendeur",
+    "description": "Ouvrez votre boutique en ligne avec Lion",
+    "becomeSeller": "Devenir Vendeur",
+    "pricing": "700 DA/mois après essai gratuit",
+    "features": {
+      "shop": "Boutique personnalisée",
+      "commission": "0% de commission",
+      "support": "Support technique",
+      "analytics": "Statistiques détaillées"
+    }
+  },
+  "support": {
+    "helpCenter": "Centre d'aide",
+    "contact": "Contact",
+    "shipping": "Livraison",
+    "returns": "Retours",
+    "helpTitle": "Centre d'Aide",
+    "helpDesc": "Trouvez des réponses à vos questions",
+    "contactTitle": "Nous Contacter",
+    "contactDesc": "Notre équipe est là pour vous aider",
+    "shippingTitle": "Informations de Livraison",
+    "shippingDesc": "Tout savoir sur nos modes de livraison",
+    "returnsTitle": "Politique de Retour",
+    "returnsDesc": "Conditions de retour et d'échange",
+    "faq": "Questions Fréquentes",
+    "email": "support@lion-dz.com",
+    "phone": "+213 XXX XXX XXX",
+    "workingHours": "Lun-Ven: 9h-17h"
+  },
+  "admin": {
+    "homepageContent": "Contenu Accueil",
+    "contributorTitle": "Contributeur du Mois",
+    "eventTitle": "Événement à Venir",
+    "manageHomepage": "Gérer le Contenu de l'Accueil",
+    "activeContent": "Contenu Actif",
+    "contributor": "Contributeur",
+    "event": "Événement",
+    "sales": "ventes",
+    "eventDate": "Date de l'événement",
+    "eventLocation": "Lieu"
   }
-} 
+}

@@ -1,3 +1,4 @@
+
 {
   "common": {
     "products": "Products",
@@ -10,7 +11,25 @@
     "cart": "Cart",
     "admin": "Admin",
     "teamSpace": "Team Space",
-    "sellerSpace": "Seller Space"
+    "sellerSpace": "Seller Space",
+    "backToHome": "Back to Home",
+    "submit": "Submit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "city": "City",
+    "wilaya": "Wilaya"
   },
   "home": {
     "hero": {
@@ -22,5 +41,74 @@
       "title": "Featured Products",
       "subtitle": "Discover our selection of popular products"
     }
+  },
+  "footer": {
+    "description": "Your premium destination for fashion in Algeria. Discover quality clothing with our unique affiliate system.",
+    "shop": "Shop",
+    "team": "Team Tasedda",
+    "support": "Support",
+    "contributorOfMonth": "Contributor of the Month",
+    "upcomingEvent": "Upcoming Event",
+    "copyright": "All rights reserved. Made with ❤️ in Algeria"
+  },
+  "team": {
+    "title": "Join Team Lion",
+    "description": "Join our team and benefit from exclusive commissions",
+    "joinTeam": "Join Team",
+    "advantages": "Advantages",
+    "commissions": "Commissions",
+    "advantagesTitle": "Team Lion Advantages",
+    "advantagesDesc": "Discover all the benefits of being part of our team",
+    "commissionsTitle": "Commission System",
+    "commissionsDesc": "Earn commissions on every sale made",
+    "benefits": {
+      "commission": "5% commission on all sales",
+      "promoCode": "Personal promo code",
+      "support": "Dedicated support",
+      "training": "Free training",
+      "community": "Active community"
+    }
+  },
+  "seller": {
+    "title": "Become a Seller",
+    "description": "Open your online store with Lion",
+    "becomeSeller": "Become Seller",
+    "pricing": "700 DA/month after free trial",
+    "features": {
+      "shop": "Custom shop",
+      "commission": "0% commission",
+      "support": "Technical support",
+      "analytics": "Detailed analytics"
+    }
+  },
+  "support": {
+    "helpCenter": "Help Center",
+    "contact": "Contact",
+    "shipping": "Shipping",
+    "returns": "Returns",
+    "helpTitle": "Help Center",
+    "helpDesc": "Find answers to your questions",
+    "contactTitle": "Contact Us",
+    "contactDesc": "Our team is here to help",
+    "shippingTitle": "Shipping Information",
+    "shippingDesc": "Everything about our shipping methods",
+    "returnsTitle": "Return Policy",
+    "returnsDesc": "Return and exchange conditions",
+    "faq": "Frequently Asked Questions",
+    "email": "support@lion-dz.com",
+    "phone": "+213 XXX XXX XXX",
+    "workingHours": "Mon-Fri: 9am-5pm"
+  },
+  "admin": {
+    "homepageContent": "Homepage Content",
+    "contributorTitle": "Contributor of the Month",
+    "eventTitle": "Upcoming Event",
+    "manageHomepage": "Manage Homepage Content",
+    "activeContent": "Active Content",
+    "contributor": "Contributor",
+    "event": "Event",
+    "sales": "sales",
+    "eventDate": "Event date",
+    "eventLocation": "Event location"
   }
-} 
+}

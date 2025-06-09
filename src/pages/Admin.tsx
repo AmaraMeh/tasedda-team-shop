@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Crown, ShoppingCart, Box, Gift, Banknote, LayoutDashboard, UserPlus, UserCog, RefreshCw } from 'lucide-react';
+import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Crown, ShoppingCart, Box, Gift, Banknote, LayoutDashboard, UserPlus, UserCog, RefreshCw, Globe } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Dashboard from './admin/Dashboard';
 import TeamRequests from './admin/TeamRequests';
@@ -15,10 +15,12 @@ import Products from './admin/Products';
 import Withdrawals from './admin/Withdrawals';
 import Primes from './admin/Primes';
 import Users from './admin/Users';
+import Homepage from './admin/Homepage';
 import React from 'react';
 
 const SECTIONS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { key: 'homepage', label: 'Contenu Accueil', icon: Globe },
   { key: 'team-requests', label: 'Demandes Team', icon: UserPlus },
   { key: 'team-members', label: 'Membres Team', icon: UsersIcon },
   { key: 'sellers', label: 'Boutiques', icon: Store },
@@ -120,6 +122,7 @@ const Admin = () => {
 
         <div className="rounded-xl bg-black/80 shadow-lg p-4 md:p-8 min-h-[60vh]">
           {tab === 'dashboard' && <Dashboard />}
+          {tab === 'homepage' && <Homepage />}
           {tab === 'team-requests' && <TeamRequests />}
           {tab === 'team-members' && <TeamMembers />}
           {tab === 'sellers' && <Sellers />}

@@ -89,14 +89,14 @@ const Index = () => {
       <HeroSection showTeamCTA={userRole !== 'team'} showSellerCTA={userRole !== 'seller'} />
       
       {/* Featured Products Section */}
-      <section className="py-20 px-4">
+      <section className="py-12 md:py-20 px-4">
         <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4 gold-text">Produits Vedettes</h2>
-            <p className="text-xl text-muted-foreground">Découvrez notre sélection de produits populaires</p>
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 gold-text">{t('home.featuredProducts.title')}</h2>
+            <p className="text-lg md:text-xl text-muted-foreground">{t('home.featuredProducts.subtitle')}</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
