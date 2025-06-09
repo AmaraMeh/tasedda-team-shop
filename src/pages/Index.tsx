@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import HeroSection from '@/components/HeroSection';
@@ -8,6 +10,7 @@ import Header from '@/components/Layout/Header';
 import { Product } from '@/types';
 
 const Index = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -33,6 +36,7 @@ const Index = () => {
     if (data) {
       const products = data.map(item => ({
         ...item,
+        image_url: item.image_url || '/placeholder.svg',
         image: item.image_url || '/placeholder.svg',
         category: item.categories?.name || 'Sans catégorie',
         inStock: item.stock_quantity ? item.stock_quantity > 0 : true

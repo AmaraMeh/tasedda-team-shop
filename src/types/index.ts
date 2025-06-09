@@ -55,6 +55,7 @@ export interface Product {
   price: number;
   original_price?: number;
   image_url: string;
+  image: string; // For compatibility
   images?: string[];
   sizes?: string[];
   colors?: string[];
@@ -62,9 +63,11 @@ export interface Product {
   inStock: boolean;
   is_featured: boolean;
   seller_id?: string;
+  seller_type?: 'normal' | 'wholesale';
   category_id?: string;
   stock_quantity?: number;
   is_active?: boolean;
+  show_price?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -104,9 +107,10 @@ export interface Seller {
   business_name: string;
   slug: string;
   description: string;
+  seller_type: 'normal' | 'wholesale';
   is_active: boolean;
   monthly_fee: number;
-  status: 'pending' | 'active' | 'refused' | 'blocked';
+  status: 'pending' | 'active' | 'suspended';
   subscription_status: 'trial' | 'active' | 'expired';
   subscription_expires_at: string;
   created_at: string;
@@ -145,4 +149,29 @@ export interface Order {
   };
   created_at: string;
   updated_at: string;
+}
+
+export interface HomepageContent {
+  id: string;
+  type: 'contributor' | 'event';
+  title: string;
+  subtitle?: string;
+  content?: any;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamRequest {
+  id: string;
+  user_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  admin_notes: string | null;
+  invited_by: string | null;
+  profiles: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
 }

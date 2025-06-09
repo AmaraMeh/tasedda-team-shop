@@ -1,24 +1,29 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
-import { ShoppingCart, User, LogOut, Menu, X } from 'lucide-react';
-import Cart from '../Cart';
-import Checkout from '../Checkout';
-import LanguageSelector from '../LanguageSelector';
+import LanguageSelector from '@/components/LanguageSelector';
+import { Menu, ShoppingCart, User, LogOut, Settings, Crown, Users, Store, Package, MapPin } from 'lucide-react';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
-  const { getCartCount } = useCart();
   const { t } = useTranslation();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const { items } = useCart();
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -68,224 +73,152 @@ const Header = () => {
     setUserRole('user');
   };
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
-  const openCheckout = () => {
-    setIsCartOpen(false);
-    setIsCheckoutOpen(true);
-  };
+  const navigationItems = [
+    { label: t('common.products'), href: '/products' },
+    { 
+      label: t('common.localSellers'), 
+      href: '/local-sellers',
+      icon: MapPin 
+    },
+    { 
+      label: t('common.wholesalers'), 
+      href: '/wholesalers',
+      icon: Package 
+    },
+  ];
+
+  // Add conditional navigation items
+  if (userRole !== 'team') {
+    navigationItems.push({ label: t('common.joinTeam'), href: '/team' });
+  }
+  if (userRole !== 'seller') {
+    navigationItems.push({ label: t('common.becomeSeller'), href: '/seller' });
+  }
 
   return (
-    <>
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-gold/20">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="gold-gradient h-8 w-8 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-lg">L</span>
-              </div>
-              <span className="font-display text-2xl font-bold gold-text">Lion</span>
-            </Link>
+    <header className="sticky top-0 z-50 w-full border-b border-gold/20 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="h-8 w-8 bg-gradient-to-r from-gold to-yellow-600 rounded-full flex items-center justify-center">
+              <span className="text-black font-bold text-sm">L</span>
+            </div>
+            <span className="font-bold text-xl gold-text">Lion</span>
+          </Link>
 
-            {/* Navigation Desktop */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link to="/products" className="text-white hover:text-gold transition-colors">
-                {t('common.products')}
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            {navigationItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-2"
+              >
+                {item.icon && <item.icon className="h-4 w-4" />}
+                {item.label}
               </Link>
-              {userRole !== 'team' && userRole !== 'seller' && (
-                <>
-                  <Link to="/team" className="text-white hover:text-gold transition-colors">
-                    {t('common.joinTeam')}
-                  </Link>
-                  <Link to="/seller" className="text-white hover:text-gold transition-colors">
-                    {t('common.becomeSeller')}
-                  </Link>
-                </>
+            ))}
+          </nav>
+
+          {/* Right side actions */}
+          <div className="flex items-center space-x-4">
+            <LanguageSelector />
+            
+            {/* Cart */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative hover:bg-gold/10"
+              onClick={() => navigate('/cart')}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {items.length > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-gold text-black text-xs">
+                  {items.reduce((sum, item) => sum + item.quantity, 0)}
+                </Badge>
               )}
-            </nav>
+            </Button>
 
-            {/* Actions */}
-            <div className="flex items-center space-x-4">
-              {/* Language Selector */}
-              <LanguageSelector />
-
-              {/* Cart */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCartOpen(true)}
-                className="relative text-white hover:text-gold"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {getCartCount() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-gold text-black text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {getCartCount()}
-                  </span>
-                )}
-              </Button>
-
-              {/* User Actions */}
-              {user ? (
-                <div className="hidden md:flex items-center space-x-2">
+            {/* User menu */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-gold/10">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-black border-gold/20">
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    {t('common.profile')}
+                  </DropdownMenuItem>
+                  
                   {userRole === 'admin' && (
-                    <Button asChild variant="outline" size="sm" className="border-gold/20 text-gold">
-                      <Link to="/admin">{t('common.admin')}</Link>
-                    </Button>
+                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                      <Crown className="mr-2 h-4 w-4" />
+                      {t('common.admin')}
+                    </DropdownMenuItem>
                   )}
+                  
                   {userRole === 'team' && (
-                    <Button asChild variant="outline" size="sm" className="border-gold/20 text-gold">
-                      <Link to="/team-space">{t('common.teamSpace')}</Link>
-                    </Button>
+                    <DropdownMenuItem onClick={() => navigate('/team-space')}>
+                      <Users className="mr-2 h-4 w-4" />
+                      {t('common.teamSpace')}
+                    </DropdownMenuItem>
                   )}
+                  
                   {userRole === 'seller' && (
-                    <Button asChild variant="outline" size="sm" className="border-gold/20 text-gold">
-                      <Link to="/seller-space">{t('common.sellerSpace')}</Link>
-                    </Button>
+                    <DropdownMenuItem onClick={() => navigate('/seller-space')}>
+                      <Store className="mr-2 h-4 w-4" />
+                      {t('common.sellerSpace')}
+                    </DropdownMenuItem>
                   )}
-                  <Button asChild variant="ghost" size="sm" className="text-white hover:text-gold">
-                    <Link to="/profile">
-                      <User className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-white hover:text-gold"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="hidden md:flex items-center space-x-2">
-                  <Button asChild variant="ghost" size="sm" className="text-white hover:text-gold">
-                    <Link to="/auth">{t('common.login')}</Link>
-                  </Button>
-                  <Button asChild size="sm" className="btn-gold">
-                    <Link to="/auth">{t('common.register')}</Link>
-                  </Button>
-                </div>
-              )}
-
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden text-white"
-              >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {t('common.logout')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={() => navigate('/auth')} className="btn-gold">
+                {t('common.login')}
               </Button>
-            </div>
+            )}
+
+            {/* Mobile menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden hover:bg-gold/10">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80 bg-black border-gold/20">
+                <nav className="flex flex-col space-y-4 mt-8">
+                  {navigationItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className="text-lg font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-3 p-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.icon && <item.icon className="h-5 w-5" />}
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
-
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden border-t border-gold/20 py-4">
-              <nav className="flex flex-col space-y-4">
-                <Link
-                  to="/products"
-                  className="text-white hover:text-gold transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {t('common.products')}
-                </Link>
-                {userRole !== 'team' && userRole !== 'seller' && (
-                  <>
-                    <Link
-                      to="/team"
-                      className="text-white hover:text-gold transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      {t('common.joinTeam')}
-                    </Link>
-                    <Link
-                      to="/seller"
-                      className="text-white hover:text-gold transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      {t('common.becomeSeller')}
-                    </Link>
-                  </>
-                )}
-                
-                {user ? (
-                  <div className="flex flex-col space-y-2 pt-4 border-t border-gold/20">
-                    {userRole === 'admin' && (
-                      <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="outline" size="sm" className="w-full border-gold/20 text-gold">
-                          {t('common.admin')}
-                        </Button>
-                      </Link>
-                    )}
-                    {userRole === 'team' && (
-                      <Link to="/team-space" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="outline" size="sm" className="w-full border-gold/20 text-gold">
-                          {t('common.teamSpace')}
-                        </Button>
-                      </Link>
-                    )}
-                    {userRole === 'seller' && (
-                      <Link to="/seller-space" onClick={() => setIsMenuOpen(false)}>
-                        <Button variant="outline" size="sm" className="w-full border-gold/20 text-gold">
-                          {t('common.sellerSpace')}
-                        </Button>
-                      </Link>
-                    )}
-                    <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
-                      <Button variant="ghost" size="sm" className="w-full text-white hover:text-gold justify-start">
-                        <User className="h-4 w-4 mr-2" />
-                        {t('common.profile')}
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        handleLogout();
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full text-white hover:text-gold justify-start"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      {t('common.logout')}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col space-y-2 pt-4 border-t border-gold/20">
-                    <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                      <Button variant="ghost" size="sm" className="w-full text-white hover:text-gold">
-                        {t('common.login')}
-                      </Button>
-                    </Link>
-                    <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                      <Button size="sm" className="w-full btn-gold">
-                        {t('common.register')}
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </nav>
-            </div>
-          )}
         </div>
-      </header>
-
-      <Cart 
-        isOpen={isCartOpen} 
-        onClose={() => setIsCartOpen(false)}
-        onCheckout={openCheckout}
-      />
-      
-      <Checkout 
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-      />
-    </>
+      </div>
+    </header>
   );
 };
 

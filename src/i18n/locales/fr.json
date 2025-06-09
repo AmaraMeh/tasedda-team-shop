@@ -29,7 +29,10 @@
     "email": "Email",
     "address": "Adresse",
     "city": "Ville",
-    "wilaya": "Wilaya"
+    "wilaya": "Wilaya",
+    "active": "Actif",
+    "localSellers": "Vendeurs Locaux",
+    "wholesalers": "Grossistes"
   },
   "home": {
     "hero": {
@@ -78,7 +81,85 @@
       "shop": "Boutique personnalisée",
       "commission": "0% de commission",
       "support": "Support technique",
-      "analytics": "Statistiques détaillées"
+      "analytics": "Statistiques détaillées",
+      "trial": "1 Mois Gratuit",
+      "trialDesc": "Testez notre plateforme sans engagement pendant un mois complet",
+      "supportDesc": "Accompagnement personnalisé pour développer votre business",
+      "pricing": "700 DA/mois",
+      "pricingDesc": "Tarif abordable après la période d'essai gratuite"
+    },
+    "hero": {
+      "title": "Créez Votre",
+      "shop": "Boutique",
+      "online": "en Ligne",
+      "description": "Développez votre business depuis chez vous avec notre plateforme vendeurs. Vendez vos produits à travers notre réseau et bénéficiez de notre audience.",
+      "pricing": "1 Mois Gratuit + 700 DA/mois après"
+    },
+    "types": {
+      "title": "Choisissez Votre",
+      "choose": "Type de Vendeur",
+      "description": "Sélectionnez le type de compte vendeur qui correspond le mieux à votre activité",
+      "normal": {
+        "title": "Vendeur Normal",
+        "description": "Pour la vente au détail avec prix fixes",
+        "feature1": "Prix fixes visibles",
+        "feature2": "Vente au détail",
+        "feature3": "Boutique personnalisée"
+      },
+      "wholesale": {
+        "title": "Grossiste",
+        "description": "Pour la vente en gros avec négociation",
+        "feature1": "Prix négociables",
+        "feature2": "Vente en gros",
+        "feature3": "Chat direct clients"
+      }
+    },
+    "form": {
+      "title": "Créer Ma Boutique",
+      "description": "Commencez votre aventure de vendeur dès aujourd'hui",
+      "type": "Type de vendeur",
+      "businessName": "Nom de votre boutique",
+      "businessPlaceholder": "Ma Boutique Mode",
+      "description": "Description de votre boutique",
+      "descriptionPlaceholder": "Décrivez votre boutique et vos produits...",
+      "conditions": "Conditions :",
+      "condition1": "1 mois d'essai gratuit",
+      "condition2": "700 DA/mois après la période d'essai",
+      "condition3": "Paiement via BaridiMob (manuel)",
+      "condition4": "Validation des produits par l'admin",
+      "create": "Créer Ma Boutique",
+      "creating": "Création...",
+      "slugExists": "Nom de boutique déjà pris",
+      "chooseAnother": "Veuillez choisir un autre nom pour votre boutique.",
+      "requestSent": "Demande envoyée !",
+      "requestDescription": "Votre demande de boutique a été envoyée et sera examinée par l'administration."
+    },
+    "pending": {
+      "title": "Votre demande de boutique est en attente de validation par l'administration.",
+      "description": "Vous recevrez un email dès qu'elle sera validée."
+    },
+    "active": {
+      "title": "Votre",
+      "shop": "Boutique",
+      "isActive": "est active !",
+      "description": "Vous avez déjà une boutique sur Tasedda. Consultez votre profil pour la gérer.",
+      "manage": "Gérer ma boutique"
+    }
+  },
+  "sellers": {
+    "local": {
+      "title": "Vendeurs Locaux",
+      "description": "Découvrez nos vendeurs locaux partenaires avec des prix fixes et une livraison rapide",
+      "visitShop": "Visiter la Boutique",
+      "noSellers": "Aucun vendeur local disponible pour le moment"
+    },
+    "wholesale": {
+      "title": "Grossistes",
+      "description": "Contactez nos grossistes pour des achats en gros et négociez vos prix",
+      "wholesale": "Grossiste",
+      "viewCatalog": "Catalogue",
+      "negotiate": "Négocier",
+      "noWholesalers": "Aucun grossiste disponible pour le moment"
     }
   },
   "support": {

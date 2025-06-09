@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
@@ -8,15 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Store, Shield, Users, TrendingUp, CheckCircle } from 'lucide-react';
-import type { User as AuthUser } from '@supabase/supabase-js';
+import { Store, Shield, Users, TrendingUp, CheckCircle, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Seller = () => {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const [businessName, setBusinessName] = useState('');
   const [description, setDescription] = useState('');
+  const [sellerType, setSellerType] = useState<'normal' | 'wholesale'>('normal');
   const [dataLoading, setDataLoading] = useState(true);
   const [isSeller, setIsSeller] = useState(false);
   const navigate = useNavigate();
@@ -74,8 +77,8 @@ const Seller = () => {
 
       if (existingSeller) {
         toast({
-          title: "Nom de boutique déjà pris",
-          description: "Veuillez choisir un autre nom pour votre boutique.",
+          title: t('seller.form.slugExists'),
+          description: t('seller.form.chooseAnother'),
           variant: "destructive",
         });
         return;
@@ -88,21 +91,22 @@ const Seller = () => {
           business_name: businessName,
           slug: slug,
           description: description,
-          status: 'pending', // Demande en attente de validation admin
+          seller_type: sellerType,
+          status: 'pending',
         });
 
       if (error) throw error;
 
       toast({
-        title: "Demande envoyée !",
-        description: `Votre demande de boutique a été envoyée et sera examinée par l'administration.`,
+        title: t('seller.form.requestSent'),
+        description: t('seller.form.requestDescription'),
       });
 
       setIsSeller(false);
       navigate('/profile');
     } catch (error: any) {
       toast({
-        title: "Erreur",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -112,43 +116,43 @@ const Seller = () => {
   const features = [
     {
       icon: Shield,
-      title: "1 Mois Gratuit",
-      description: "Testez notre plateforme sans engagement pendant un mois complet"
+      title: t('seller.features.trial'),
+      description: t('seller.features.trialDesc')
     },
     {
       icon: Users,
-      title: "Support Dédié",
-      description: "Accompagnement personnalisé pour développer votre business"
+      title: t('seller.features.support'),
+      description: t('seller.features.supportDesc')
     },
     {
       icon: TrendingUp,
-      title: "700 DA/mois",
-      description: "Tarif abordable après la période d'essai gratuite"
+      title: t('seller.features.pricing'),
+      description: t('seller.features.pricingDesc')
     }
   ];
 
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-gold">Chargement...</div>
+        <div className="text-gold">{t('common.loading')}</div>
       </div>
     );
   }
 
   if (isSeller) {
-    // Charger la boutique pour vérifier le statut
     const [shop, setShop] = useState<any>(null);
     useEffect(() => {
       if (user) {
         supabase.from('sellers').select('*').eq('user_id', user.id).single().then(({ data }) => setShop(data));
       }
     }, [user]);
+    
     if (shop && shop.status === 'pending') {
       return (
         <div className="min-h-screen bg-black flex items-center justify-center">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gold mb-4">Votre demande de boutique est en attente de validation par l'administration.</h2>
-            <p className="text-muted-foreground">Vous recevrez un email dès qu'elle sera validée.</p>
+            <h2 className="text-2xl font-bold text-gold mb-4">{t('seller.pending.title')}</h2>
+            <p className="text-muted-foreground">{t('seller.pending.description')}</p>
           </div>
         </div>
       );
@@ -161,13 +165,13 @@ const Seller = () => {
             <div className="text-center" data-aos="fade-up">
               <CheckCircle className="h-20 w-20 mx-auto mb-6 text-gold" />
               <h1 className="text-3xl font-display font-bold mb-4">
-                Votre <span className="gold-text">Boutique</span> est active !
+                {t('seller.active.title')} <span className="gold-text">{t('seller.active.shop')}</span> {t('seller.active.isActive')}
               </h1>
               <p className="text-muted-foreground mb-8">
-                Vous avez déjà une boutique sur Tasedda. Consultez votre profil pour la gérer.
+                {t('seller.active.description')}
               </p>
               <Button onClick={() => navigate('/profile')} className="btn-gold">
-                Gérer ma boutique
+                {t('seller.active.manage')}
               </Button>
             </div>
           </main>
@@ -186,16 +190,15 @@ const Seller = () => {
         <section className="container mx-auto px-4 text-center mb-20" data-aos="fade-up">
           <Store className="h-20 w-20 mx-auto mb-6 text-gold" />
           <h1 className="text-4xl lg:text-5xl font-display font-bold mb-6">
-            Créez Votre <span className="gold-text">Boutique</span> en Ligne
+            {t('seller.hero.title')} <span className="gold-text">{t('seller.hero.shop')}</span> {t('seller.hero.online')}
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Développez votre business depuis chez vous avec notre plateforme vendeurs. 
-            Vendez vos produits à travers notre réseau et bénéficiez de notre audience.
+            {t('seller.hero.description')}
           </p>
           <div className="gold-gradient rounded-lg p-1 inline-block">
             <div className="bg-black rounded-lg px-8 py-4">
               <span className="text-2xl font-bold gold-text">
-                1 Mois Gratuit + 700 DA/mois après
+                {t('seller.hero.pricing')}
               </span>
             </div>
           </div>
@@ -218,43 +221,65 @@ const Seller = () => {
           </div>
         </section>
 
-        {/* Processus */}
+        {/* Types de vendeurs */}
         <section className="container mx-auto px-4 mb-20" data-aos="fade-up">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-display font-bold mb-4">
-              Comment ça <span className="gold-text">Marche</span> ?
+              {t('seller.types.title')} <span className="gold-text">{t('seller.types.choose')}</span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Un processus simple en 3 étapes pour lancer votre boutique en ligne
+              {t('seller.types.description')}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                step: "1",
-                title: "Inscription",
-                description: "Créez votre compte et remplissez les informations de votre boutique"
-              },
-              {
-                step: "2",
-                title: "Période d'essai",
-                description: "Profitez d'un mois gratuit pour tester notre plateforme"
-              },
-              {
-                step: "3",
-                title: "Vendre",
-                description: "Ajoutez vos produits et commencez à vendre à notre audience"
-              }
-            ].map((item, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 gold-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl font-bold text-black">{item.step}</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <Card className="glass-effect border-gold/20">
+              <CardHeader className="text-center">
+                <Store className="h-16 w-16 mx-auto mb-4 text-gold" />
+                <CardTitle>{t('seller.types.normal.title')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground text-center">{t('seller.types.normal.description')}</p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{t('seller.types.normal.feature1')}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{t('seller.types.normal.feature2')}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{t('seller.types.normal.feature3')}</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-effect border-gold/20">
+              <CardHeader className="text-center">
+                <Package className="h-16 w-16 mx-auto mb-4 text-gold" />
+                <CardTitle>{t('seller.types.wholesale.title')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground text-center">{t('seller.types.wholesale.description')}</p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{t('seller.types.wholesale.feature1')}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{t('seller.types.wholesale.feature2')}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">{t('seller.types.wholesale.feature3')}</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
@@ -264,21 +289,35 @@ const Seller = () => {
             <Card className="glass-effect border-gold/20">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl gold-text">
-                  Créer Ma Boutique
+                  {t('seller.form.title')}
                 </CardTitle>
                 <p className="text-muted-foreground">
-                  Commencez votre aventure de vendeur dès aujourd'hui
+                  {t('seller.form.description')}
                 </p>
               </CardHeader>
               <CardContent>
                 <form onSubmit={createSeller} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="businessName">Nom de votre boutique *</Label>
+                    <Label htmlFor="sellerType">{t('seller.form.type')} *</Label>
+                    <RadioGroup value={sellerType} onValueChange={(value: 'normal' | 'wholesale') => setSellerType(value)}>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="normal" id="normal" />
+                        <Label htmlFor="normal">{t('seller.types.normal.title')}</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="wholesale" id="wholesale" />
+                        <Label htmlFor="wholesale">{t('seller.types.wholesale.title')}</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName">{t('seller.form.businessName')} *</Label>
                     <Input
                       id="businessName"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder="Ma Boutique Mode"
+                      placeholder={t('seller.form.businessPlaceholder')}
                       required
                       className="bg-black/50 border-gold/20 focus:border-gold"
                     />
@@ -290,30 +329,30 @@ const Seller = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description de votre boutique</Label>
+                    <Label htmlFor="description">{t('seller.form.description')}</Label>
                     <Textarea
                       id="description"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Décrivez votre boutique et vos produits..."
+                      placeholder={t('seller.form.descriptionPlaceholder')}
                       className="bg-black/50 border-gold/20 focus:border-gold"
                       rows={3}
                     />
                   </div>
 
                   <div className="bg-gold/10 border border-gold/20 rounded-lg p-4">
-                    <h4 className="font-semibold text-gold mb-2">Conditions :</h4>
+                    <h4 className="font-semibold text-gold mb-2">{t('seller.form.conditions')}</h4>
                     <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• 1 mois d'essai gratuit</li>
-                      <li>• 700 DA/mois après la période d'essai</li>
-                      <li>• Paiement via BaridiMob (manuel)</li>
-                      <li>• Validation des produits par l'admin</li>
+                      <li>• {t('seller.form.condition1')}</li>
+                      <li>• {t('seller.form.condition2')}</li>
+                      <li>• {t('seller.form.condition3')}</li>
+                      <li>• {t('seller.form.condition4')}</li>
                     </ul>
                   </div>
                   
                   <Button type="submit" className="w-full btn-gold" disabled={loading}>
                     <Store className="h-4 w-4 mr-2" />
-                    {loading ? "Création..." : "Créer Ma Boutique"}
+                    {loading ? t('seller.form.creating') : t('seller.form.create')}
                   </Button>
                 </form>
               </CardContent>

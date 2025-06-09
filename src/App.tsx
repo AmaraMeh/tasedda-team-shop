@@ -14,6 +14,8 @@ const queryClient = new QueryClient();
 // Lazy loading des pages
 const Auth = lazy(() => import('./pages/Auth'));
 const Products = lazy(() => import('./pages/Products'));
+const LocalSellers = lazy(() => import('./pages/LocalSellers'));
+const Wholesalers = lazy(() => import('./pages/Wholesalers'));
 const Team = lazy(() => import('./pages/Team'));
 const TeamAdvantages = lazy(() => import('./pages/team/TeamAdvantages'));
 const TeamCommissions = lazy(() => import('./pages/team/TeamCommissions'));
@@ -47,6 +49,8 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/products" element={<Products />} />
+                  <Route path="/local-sellers" element={<LocalSellers />} />
+                  <Route path="/wholesalers" element={<Wholesalers />} />
                   <Route path="/team" element={<Team />} />
                   <Route path="/team/advantages" element={<TeamAdvantages />} />
                   <Route path="/team/commissions" element={<TeamCommissions />} />

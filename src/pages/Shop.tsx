@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,6 +62,7 @@ const Shop = () => {
     if (data) {
       const productsWithCategory = data.map(item => ({
         ...item,
+        image_url: item.image_url || '/placeholder.svg',
         image: item.image_url || '/placeholder.svg',
         category: item.categories?.name || 'Sans catégorie',
         inStock: item.stock_quantity ? item.stock_quantity > 0 : true
