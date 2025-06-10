@@ -30,18 +30,39 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
+  console.log('ProductCard rendering with product:', product);
+
   const discount = product.original_price 
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
   const handleAddToCart = () => {
-    if (!product.inStock) return;
+    console.log('Adding product to cart:', product);
     
-    addToCart(product, 1);
-    toast({
-      title: "Produit ajouté",
-      description: `${product.name} a été ajouté à votre panier`,
-    });
+    if (!product.inStock) {
+      toast({
+        title: "Produit indisponible",
+        description: "Ce produit n'est pas en stock",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      addToCart(product, 1);
+      toast({
+        title: "Produit ajouté",
+        description: `${product.name} a été ajouté à votre panier`,
+      });
+      console.log('Product added to cart successfully');
+    } catch (error) {
+      console.error('Error adding product to cart:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le produit au panier",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

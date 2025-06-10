@@ -20,10 +20,12 @@ import { Menu, ShoppingCart, User, LogOut, Settings, Crown, Users, Store, Packag
 const Header = () => {
   const { t } = useTranslation();
   const { user, signOut } = useAuth();
-  const { items } = useCart();
+  const { items, getCartCount } = useCart();
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  console.log('Header: cart items count:', getCartCount());
 
   useEffect(() => {
     if (user) {
@@ -76,6 +78,11 @@ const Header = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleCartClick = () => {
+    console.log('Cart button clicked, navigating to /cart');
+    navigate('/cart');
   };
 
   const navigationItems = [
@@ -135,12 +142,12 @@ const Header = () => {
               variant="ghost"
               size="icon"
               className="relative hover:bg-gold/10"
-              onClick={() => navigate('/cart')}
+              onClick={handleCartClick}
             >
               <ShoppingCart className="h-5 w-5" />
-              {items.length > 0 && (
+              {getCartCount() > 0 && (
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-gold text-black text-xs">
-                  {items.reduce((sum, item) => sum + item.quantity, 0)}
+                  {getCartCount()}
                 </Badge>
               )}
             </Button>
