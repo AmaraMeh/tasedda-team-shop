@@ -31,6 +31,11 @@
     "cart": "Panier"
   },
   "home": {
+    "hero": {
+      "title": "LION by Tasedda",
+      "subtitle": "Votre destination e-commerce premium en Algérie",
+      "description": "Découvrez une expérience d'achat unique avec notre sélection de vêtements premium, notre système d'affiliation Team Lion, et nos boutiques partenaires Tasedda locales."
+    },
     "welcome": "Bienvenue chez LION by Tasedda",
     "subtitle": "Votre destination pour les produits de qualité",
     "featuredProducts": {

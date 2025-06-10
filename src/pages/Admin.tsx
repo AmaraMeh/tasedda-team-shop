@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Crown, ShoppingCart, Box, Gift, Banknote, LayoutDashboard, UserPlus, UserCog, RefreshCw, Globe } from 'lucide-react';
+import { Shield, Users as UsersIcon, Store, Package, TrendingUp, Crown, ShoppingCart, Box, Gift, Banknote, LayoutDashboard, UserPlus, UserCog, RefreshCw, Globe, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Dashboard from './admin/Dashboard';
 import TeamRequests from './admin/TeamRequests';
@@ -16,11 +16,13 @@ import Withdrawals from './admin/Withdrawals';
 import Primes from './admin/Primes';
 import Users from './admin/Users';
 import Homepage from './admin/Homepage';
+import Chat from './admin/Chat';
 import React from 'react';
 
 const SECTIONS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'homepage', label: 'Contenu Accueil', icon: Globe },
+  { key: 'chat', label: 'Messages', icon: MessageCircle },
   { key: 'team-requests', label: 'Demandes Team', icon: UserPlus },
   { key: 'team-members', label: 'Membres Team', icon: UsersIcon },
   { key: 'sellers', label: 'Boutiques', icon: Store },
@@ -123,12 +125,13 @@ const Admin = () => {
         <div className="rounded-xl bg-black/80 shadow-lg p-4 md:p-8 min-h-[60vh]">
           {tab === 'dashboard' && <Dashboard />}
           {tab === 'homepage' && <Homepage />}
+          {tab === 'chat' && <Chat />}
           {tab === 'team-requests' && <TeamRequests />}
           {tab === 'team-members' && <TeamMembers />}
           {tab === 'sellers' && <Sellers />}
           {tab === 'managers' && (
             <div>
-              <h2 className="text-xl font-bold mb-4">Managers</h2>
+              <h2 className="text-xl font-bold mb-4 text-white">Managers</h2>
               <p className="text-muted-foreground">Section managers en cours de développement</p>
             </div>
           )}
