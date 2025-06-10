@@ -224,7 +224,7 @@ const Homepage = () => {
                 id="content"
                 value={formData.content}
                 onChange={(e) => setFormData({...formData, content: e.target.value})}
-                placeholder='{"description": "Description du contributeur", "image_url": "URL de l\'image"}'
+                placeholder='{"description": "Description du contributeur", "image_url": "URL de l&apos;image"}'
                 rows={4}
               />
             </div>
