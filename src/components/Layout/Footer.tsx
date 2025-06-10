@@ -1,148 +1,150 @@
-
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { Crown, Users, Gift, Phone, Mail, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
 
 interface HomepageContent {
   id: string;
   type: 'contributor' | 'event';
   title: string;
-  subtitle: string;
-  content: any;
+  subtitle?: string;
+  content?: any;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 const Footer = () => {
   const { t } = useTranslation();
-  const [activeContent, setActiveContent] = useState<HomepageContent | null>(null);
+  const [contributor, setContributor] = useState<HomepageContent | null>(null);
 
   useEffect(() => {
-    fetchActiveContent();
+    fetchContributor();
   }, []);
 
-  const fetchActiveContent = async () => {
+  const fetchContributor = async () => {
     const { data } = await supabase
       .from('homepage_content')
       .select('*')
+      .eq('type', 'contributor')
       .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .single();
 
-    if (data && data.length > 0) {
-      setActiveContent(data[0]);
+    if (data) {
+      setContributor(data as HomepageContent);
     }
-  };
-
-  const renderActiveContent = () => {
-    if (!activeContent) return null;
-
-    if (activeContent.type === 'contributor') {
-      return (
-        <div className="text-center">
-          <h3 className="font-display text-lg md:text-xl font-semibold gold-text mb-4">
-            {t('footer.contributorOfMonth')}
-          </h3>
-          <div className="bg-gradient-to-r from-gold/10 to-gold-light/10 rounded-lg p-4 md:p-6 max-w-md mx-auto">
-            <div className="flex items-center justify-center space-x-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm md:text-base">
-                  {activeContent.subtitle?.charAt(0) || 'A'}
-                </span>
-              </div>
-              <div>
-                <p className="font-semibold text-foreground text-sm md:text-base">{activeContent.subtitle}</p>
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  {activeContent.content?.sales || 47} {t('admin.sales')}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeContent.type === 'event') {
-      return (
-        <div className="text-center">
-          <h3 className="font-display text-lg md:text-xl font-semibold gold-text mb-4">
-            {t('footer.upcomingEvent')}
-          </h3>
-          <div className="bg-gradient-to-r from-gold/10 to-gold-light/10 rounded-lg p-4 md:p-6 max-w-md mx-auto">
-            <h4 className="font-semibold text-foreground mb-2 text-sm md:text-base">{activeContent.title}</h4>
-            <p className="text-xs md:text-sm text-muted-foreground mb-1">
-              📅 {activeContent.content?.date || 'À annoncer'}
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              📍 {activeContent.content?.location || 'À annoncer'}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
   };
 
   return (
-    <footer className="bg-card border-t border-border">
-      <div className="container mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
-          {/* Logo et description */}
-          <div className="space-y-4 text-center md:text-left">
-            <Link to="/" className="flex items-center justify-center md:justify-start space-x-2">
-              <div className="gold-gradient h-8 w-8 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-lg">L</span>
-              </div>
-              <span className="font-display text-xl md:text-2xl font-bold gold-text">Lion</span>
+    <footer className="bg-black border-t border-gold/20">
+      {contributor && (
+        <div className="bg-black/50 py-8 px-4">
+          <div className="container mx-auto text-center">
+            <div className="flex items-center justify-center mb-4">
+              <Gift className="h-6 w-6 text-gold mr-2" />
+              <h3 className="text-xl font-semibold gold-text">{t('footer.team')}</h3>
+            </div>
+            <p className="text-muted-foreground mb-4">{contributor.title}</p>
+            {contributor.subtitle && (
+              <p className="text-muted-foreground">{contributor.subtitle}</p>
+            )}
+            {contributor.content && contributor.content.description && (
+              <p className="text-muted-foreground">{contributor.content.description}</p>
+            )}
+            <Link to="/team" className="text-gold hover:underline">
+              {t('footer.team')}
             </Link>
-            <p className="text-muted-foreground text-sm">
-              {t('footer.description')}
+          </div>
+        </div>
+      )}
+      
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Brand Section */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Crown className="h-8 w-8 text-gold" />
+              <span className="text-xl font-bold gold-text">LION by Tasedda</span>
+            </div>
+            <p className="text-muted-foreground">
+              {t('footer.brand.description')}
             </p>
+            <div className="flex space-x-4">
+              <Facebook className="h-5 w-5 text-muted-foreground hover:text-gold cursor-pointer" />
+              <Instagram className="h-5 w-5 text-muted-foreground hover:text-gold cursor-pointer" />
+              <Twitter className="h-5 w-5 text-muted-foreground hover:text-gold cursor-pointer" />
+            </div>
           </div>
 
-          {/* Boutique */}
-          <div className="space-y-4 text-center md:text-left">
-            <h3 className="font-semibold text-foreground">{t('footer.shop')}</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/products?category=homme" className="hover:text-primary transition-colors">Homme</Link></li>
-              <li><Link to="/products?category=femme" className="hover:text-primary transition-colors">Femme</Link></li>
-              <li><Link to="/products?category=enfant" className="hover:text-primary transition-colors">Enfant</Link></li>
-              <li><Link to="/products?category=accessoires" className="hover:text-primary transition-colors">Accessoires</Link></li>
+          {/* Quick Links Section */}
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold gold-text">{t('footer.quickLinks')}</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/" className="text-muted-foreground hover:text-gold transition-colors">
+                  {t('navigation.home')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/products" className="text-muted-foreground hover:text-gold transition-colors">
+                  {t('navigation.products')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/local-sellers" className="text-muted-foreground hover:text-gold transition-colors">
+                  {t('navigation.localSellers')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/wholesalers" className="text-muted-foreground hover:text-gold transition-colors">
+                  {t('navigation.wholesalers')}
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Team & Affiliation */}
-          <div className="space-y-4 text-center md:text-left">
-            <h3 className="font-semibold text-foreground">{t('footer.team')}</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/team" className="hover:text-primary transition-colors">{t('team.joinTeam')}</Link></li>
-              <li><Link to="/team/advantages" className="hover:text-primary transition-colors">{t('team.advantages')}</Link></li>
-              <li><Link to="/team/commissions" className="hover:text-primary transition-colors">{t('team.commissions')}</Link></li>
-              <li><Link to="/seller" className="hover:text-primary transition-colors">{t('seller.becomeSeller')}</Link></li>
+          {/* Team Section */}
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold gold-text">{t('team.title')}</h4>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/team" className="text-muted-foreground hover:text-gold transition-colors">
+                  {t('team.join.button')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/team/advantages" className="text-muted-foreground hover:text-gold transition-colors">
+                  {t('team.advantages.title')}
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Support */}
-          <div className="space-y-4 text-center md:text-left">
-            <h3 className="font-semibold text-foreground">{t('footer.support')}</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link to="/support/help" className="hover:text-primary transition-colors">{t('support.helpCenter')}</Link></li>
-              <li><Link to="/support/contact" className="hover:text-primary transition-colors">{t('support.contact')}</Link></li>
-              <li><Link to="/support/shipping" className="hover:text-primary transition-colors">{t('support.shipping')}</Link></li>
-              <li><Link to="/support/returns" className="hover:text-primary transition-colors">{t('support.returns')}</Link></li>
+          {/* Contact Section */}
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold gold-text">{t('footer.contact')}</h4>
+            <ul className="space-y-2">
+              <li className="flex items-center space-x-2 text-muted-foreground">
+                <Phone className="h-4 w-4" />
+                <span>+213 (0) XX XXX XX XX</span>
+              </li>
+              <li className="flex items-center space-x-2 text-muted-foreground">
+                <Mail className="h-4 w-4" />
+                <span>contact@lionbytasedda.com</span>
+              </li>
+              <li className="flex items-center space-x-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>Alger, Algérie</span>
+              </li>
             </ul>
           </div>
         </div>
 
-        {/* Contenu dynamique (Contributeur du mois ou événement) */}
-        <div className="mt-8 md:mt-12 pt-6 md:pt-8 border-t border-border">
-          {renderActiveContent()}
-        </div>
-
-        {/* Copyright */}
-        <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Lion. {t('footer.copyright')}</p>
+        <div className="border-t border-gold/20 mt-8 pt-8 text-center">
+          <p className="text-muted-foreground">
+            © 2024 LION by Tasedda. {t('footer.rights')}
+          </p>
         </div>
       </div>
     </footer>

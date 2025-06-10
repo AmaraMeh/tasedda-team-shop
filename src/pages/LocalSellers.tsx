@@ -4,11 +4,32 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Store, MapPin, Phone, Mail } from 'lucide-react';
-import { Seller } from '@/types';
+import { MapPin, Phone, Mail, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface Seller {
+  id: string;
+  user_id: string;
+  business_name: string;
+  slug: string;
+  description: string;
+  seller_type: 'normal' | 'wholesale';
+  is_active: boolean;
+  monthly_fee: number;
+  status: 'pending' | 'active' | 'suspended';
+  subscription_status: 'trial' | 'active' | 'expired';
+  subscription_expires_at: string;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
+}
 
 const LocalSellers = () => {
   const { t } = useTranslation();
@@ -16,26 +37,37 @@ const LocalSellers = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLocalSellers();
+    fetchSellers();
   }, []);
 
-  const fetchLocalSellers = async () => {
-    const { data, error } = await supabase
-      .from('sellers')
-      .select(`
-        *,
-        profiles(full_name, email, phone)
-      `)
-      .eq('seller_type', 'normal')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+  const fetchSellers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sellers')
+        .select(`
+          *,
+          profiles(full_name, email, phone)
+        `)
+        .eq('seller_type', 'normal')
+        .eq('is_active', true)
+        .eq('status', 'active');
 
-    if (error) {
+      if (error) throw error;
+
+      if (data) {
+        const mappedSellers = data.map(item => ({
+          ...item,
+          seller_type: item.seller_type as 'normal' | 'wholesale',
+          status: item.status as 'pending' | 'active' | 'suspended',
+          subscription_status: item.subscription_status as 'trial' | 'active' | 'expired'
+        }));
+        setSellers(mappedSellers);
+      }
+    } catch (error) {
       console.error('Error fetching sellers:', error);
-    } else {
-      setSellers(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (loading) {
@@ -50,67 +82,59 @@ const LocalSellers = () => {
     <div className="min-h-screen bg-black">
       <Header />
       
-      <main className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 gold-text">
-              {t('sellers.local.title')}
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              {t('sellers.local.description')}
-            </p>
-          </div>
+      <main className="container mx-auto px-4 py-20">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+            {t('localSellers.title')} <span className="gold-text">Locaux</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            {t('localSellers.description')}
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sellers.map((seller) => (
-              <Card key={seller.id} className="glass-effect border-gold/20 card-hover">
-                <CardHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {sellers.map((seller) => (
+            <Card key={seller.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all">
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Store className="h-5 w-5 text-gold" />
-                      {seller.business_name}
-                    </CardTitle>
-                    <Badge className="bg-green-600">
-                      {t('common.active')}
+                    <h3 className="text-xl font-semibold gold-text">{seller.business_name}</h3>
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                      Actif
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {seller.description && (
-                    <p className="text-muted-foreground">{seller.description}</p>
-                  )}
+                  
+                  <p className="text-muted-foreground">{seller.description}</p>
                   
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gold" />
-                      <span>{seller.profiles?.email}</span>
+                    <div className="flex items-center text-muted-foreground">
+                      <Phone className="h-4 w-4 mr-2" />
+                      {seller.profiles.phone}
                     </div>
-                    {seller.profiles?.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gold" />
-                        <span>{seller.profiles.phone}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center text-muted-foreground">
+                      <Mail className="h-4 w-4 mr-2" />
+                      {seller.profiles.email}
+                    </div>
                   </div>
 
-                  <Button 
-                    className="w-full btn-gold"
-                    onClick={() => window.open(`/shop/${seller.slug}`, '_blank')}
-                  >
-                    {t('sellers.local.visitShop')}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {sellers.length === 0 && (
-            <div className="text-center py-12">
-              <Store className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{t('sellers.local.noSellers')}</p>
-            </div>
-          )}
+                  <div className="flex space-x-2">
+                    <Button asChild className="flex-1 btn-gold">
+                      <Link to={`/shop/${seller.slug}`}>
+                        Voir la boutique
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        {sellers.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Aucun vendeur local disponible pour le moment.</p>
+          </div>
+        )}
       </main>
 
       <Footer />

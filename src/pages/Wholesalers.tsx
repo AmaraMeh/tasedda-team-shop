@@ -4,11 +4,32 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Store, MessageCircle, Phone, Mail, Package } from 'lucide-react';
-import { Seller } from '@/types';
+import { Package, Phone, Mail, MessageCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface Seller {
+  id: string;
+  user_id: string;
+  business_name: string;
+  slug: string;
+  description: string;
+  seller_type: 'normal' | 'wholesale';
+  is_active: boolean;
+  monthly_fee: number;
+  status: 'pending' | 'active' | 'suspended';
+  subscription_status: 'trial' | 'active' | 'expired';
+  subscription_expires_at: string;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
+}
 
 const Wholesalers = () => {
   const { t } = useTranslation();
@@ -20,29 +41,39 @@ const Wholesalers = () => {
   }, []);
 
   const fetchWholesalers = async () => {
-    const { data, error } = await supabase
-      .from('sellers')
-      .select(`
-        *,
-        profiles(full_name, email, phone)
-      `)
-      .eq('seller_type', 'wholesale')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('sellers')
+        .select(`
+          *,
+          profiles(full_name, email, phone)
+        `)
+        .eq('seller_type', 'wholesale')
+        .eq('is_active', true)
+        .eq('status', 'active');
 
-    if (error) {
+      if (error) throw error;
+
+      if (data) {
+        const mappedWholesalers = data.map(item => ({
+          ...item,
+          seller_type: item.seller_type as 'normal' | 'wholesale',
+          status: item.status as 'pending' | 'active' | 'suspended',
+          subscription_status: item.subscription_status as 'trial' | 'active' | 'expired'
+        }));
+        setWholesalers(mappedWholesalers);
+      }
+    } catch (error) {
       console.error('Error fetching wholesalers:', error);
-    } else {
-      setWholesalers(data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleNegotiatePrice = (seller: Seller) => {
-    // Create WhatsApp link for negotiation
-    const phoneNumber = seller.profiles?.phone?.replace(/\D/g, '');
-    const message = encodeURIComponent(`Bonjour ${seller.business_name}, je souhaite négocier des prix pour des achats en gros. Pouvez-vous me donner plus d'informations ?`);
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+  const handleWhatsAppContact = (phone: string, businessName: string) => {
+    const message = `Bonjour, je suis intéressé par vos produits en gros de ${businessName}. Pouvez-vous me donner plus d'informations ?`;
+    const whatsappUrl = `https://wa.me/213${phone.substring(1)}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   if (loading) {
@@ -57,78 +88,68 @@ const Wholesalers = () => {
     <div className="min-h-screen bg-black">
       <Header />
       
-      <main className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 gold-text">
-              {t('sellers.wholesale.title')}
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              {t('sellers.wholesale.description')}
-            </p>
-          </div>
+      <main className="container mx-auto px-4 py-20">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+            <span className="gold-text">Grossistes</span> Partenaires
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Découvrez nos grossistes partenaires pour vos achats en grande quantité
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {wholesalers.map((wholesaler) => (
-              <Card key={wholesaler.id} className="glass-effect border-gold/20 card-hover">
-                <CardHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {wholesalers.map((wholesaler) => (
+            <Card key={wholesaler.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all">
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Package className="h-5 w-5 text-gold" />
-                      {wholesaler.business_name}
-                    </CardTitle>
-                    <Badge className="bg-blue-600">
-                      {t('sellers.wholesale.wholesale')}
+                    <h3 className="text-xl font-semibold gold-text">{wholesaler.business_name}</h3>
+                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
+                      <Package className="h-3 w-3 mr-1" />
+                      Grossiste
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {wholesaler.description && (
-                    <p className="text-muted-foreground">{wholesaler.description}</p>
-                  )}
+                  
+                  <p className="text-muted-foreground">{wholesaler.description}</p>
                   
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gold" />
-                      <span>{wholesaler.profiles?.email}</span>
+                    <div className="flex items-center text-muted-foreground">
+                      <Phone className="h-4 w-4 mr-2" />
+                      {wholesaler.profiles.phone}
                     </div>
-                    {wholesaler.profiles?.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gold" />
-                        <span>{wholesaler.profiles.phone}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center text-muted-foreground">
+                      <Mail className="h-4 w-4 mr-2" />
+                      {wholesaler.profiles.email}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant="outline"
-                      className="border-gold/40 text-gold hover:bg-gold/10"
-                      onClick={() => window.open(`/shop/${wholesaler.slug}`, '_blank')}
-                    >
-                      <Store className="h-4 w-4 mr-2" />
-                      {t('sellers.wholesale.viewCatalog')}
+                  <div className="space-y-2">
+                    <Button asChild className="w-full btn-gold">
+                      <Link to={`/shop/${wholesaler.slug}`}>
+                        Voir les produits
+                      </Link>
                     </Button>
                     <Button 
-                      className="btn-gold"
-                      onClick={() => handleNegotiatePrice(wholesaler)}
+                      onClick={() => handleWhatsAppContact(wholesaler.profiles.phone, wholesaler.business_name)}
+                      variant="outline"
+                      className="w-full border-green-500 text-green-400 hover:bg-green-500/10"
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
-                      {t('sellers.wholesale.negotiate')}
+                      Contacter via WhatsApp
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {wholesalers.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">{t('sellers.wholesale.noWholesalers')}</p>
-            </div>
-          )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+
+        {wholesalers.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Aucun grossiste disponible pour le moment.</p>
+          </div>
+        )}
       </main>
 
       <Footer />

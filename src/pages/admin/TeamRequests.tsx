@@ -1,26 +1,34 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Clock, User } from 'lucide-react';
+import { CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 
 interface TeamRequest {
   id: string;
   user_id: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
-  admin_notes?: string;
-  full_name?: string;
-  email?: string;
-  phone?: string;
+  admin_notes: string | null;
+  invited_by: string | null;
+  profiles: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 const TeamRequests = () => {
   const [requests, setRequests] = useState<TeamRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [adminNotes, setAdminNotes] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,30 +38,52 @@ const TeamRequests = () => {
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('team_requests_with_profiles')
-        .select('*')
+        .from('team_join_requests')
+        .select(`
+          id,
+          user_id,
+          status,
+          created_at,
+          admin_notes,
+          invited_by,
+          profiles!team_join_requests_user_id_fkey(full_name, email, phone)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
-    } catch (error) {
-      console.error('Error fetching team requests:', error);
+      
+      if (data) {
+        const mappedRequests = data.map(item => ({
+          ...item,
+          status: item.status as 'pending' | 'approved' | 'rejected',
+          profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+        }));
+        setRequests(mappedRequests);
+      }
+    } catch (error: any) {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de charger les demandes',
-        variant: 'destructive',
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (requestId: string, status: 'approved' | 'rejected') => {
+  const handleRequest = async (requestId: string, action: 'approved' | 'rejected') => {
+    setProcessingId(requestId);
+    
     try {
+      const request = requests.find(r => r.id === requestId);
+      if (!request) return;
+
+      // Update request status
       const { error: updateError } = await supabase
         .from('team_join_requests')
         .update({ 
-          status,
+          status: action,
+          admin_notes: adminNotes[requestId] || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', requestId);
@@ -61,150 +91,141 @@ const TeamRequests = () => {
       if (updateError) throw updateError;
 
       // If approved, create team member
-      if (status === 'approved') {
-        const request = requests.find(r => r.id === requestId);
-        if (request) {
-          // Generate promo code
-          const { data: promoData, error: promoError } = await supabase
-            .rpc('generate_promo_code');
+      if (action === 'approved') {
+        const { error: memberError } = await supabase
+          .from('team_members')
+          .insert({
+            user_id: request.user_id,
+            invited_by: request.invited_by,
+            is_active: true
+          });
 
-          if (promoError) throw promoError;
-
-          const { error: teamError } = await supabase
-            .from('team_members')
-            .insert({
-              user_id: request.user_id,
-              promo_code: promoData,
-              rank: 1,
-              is_active: true
-            });
-
-          if (teamError) throw teamError;
-        }
+        if (memberError) throw memberError;
       }
 
       toast({
-        title: 'Succès',
-        description: `Demande ${status === 'approved' ? 'approuvée' : 'rejetée'} avec succès`,
+        title: action === 'approved' ? "Demande approuvée" : "Demande rejetée",
+        description: `La demande de ${request.profiles.full_name} a été ${action === 'approved' ? 'approuvée' : 'rejetée'}.`,
       });
 
       fetchRequests();
-    } catch (error) {
-      console.error('Error updating request:', error);
+    } catch (error: any) {
       toast({
-        title: 'Erreur',
-        description: 'Impossible de mettre à jour la demande',
-        variant: 'destructive',
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
       });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary">En attente</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-500">Approuvée</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Rejetée</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
-      </div>
-    );
+    return <div className="flex items-center justify-center p-8">Chargement...</div>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Demandes Team</h1>
-        <Badge variant="outline" className="text-gold border-gold">
-          {requests.filter(r => r.status === 'pending').length} En attente
-        </Badge>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Demandes d'Adhésion Team</h1>
+        <div className="text-sm text-muted-foreground">
+          {requests.filter(r => r.status === 'pending').length} en attente
+        </div>
       </div>
 
-      <div className="grid gap-6">
-        {requests.length === 0 ? (
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="text-center py-12">
-              <User className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucune demande trouvée</p>
-            </CardContent>
-          </Card>
-        ) : (
-          requests.map((request) => (
-            <Card key={request.id} className="glass-effect border-gold/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-3">
-                    <User className="h-5 w-5" />
-                    {request.full_name || 'Nom non renseigné'}
+      <div className="grid gap-4">
+        {requests.map((request) => (
+          <Card key={request.id}>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <span>{request.profiles.full_name}</span>
+                    {getStatusBadge(request.status)}
                   </CardTitle>
-                  <Badge
-                    variant={
-                      request.status === 'pending' ? 'default' :
-                      request.status === 'approved' ? 'default' : 'destructive'
-                    }
-                  >
-                    {request.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-                    {request.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
-                    {request.status === 'rejected' && <XCircle className="h-3 w-3 mr-1" />}
-                    {request.status === 'pending' ? 'En attente' :
-                     request.status === 'approved' ? 'Approuvée' : 'Rejetée'}
-                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    {request.profiles.email} • {request.profiles.phone}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Demande créée le {new Date(request.created_at).toLocaleDateString()}
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{request.email || 'Non renseigné'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Téléphone</p>
-                      <p className="font-medium">{request.phone || 'Non renseigné'}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date de demande</p>
-                    <p className="font-medium">
-                      {new Date(request.created_at).toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-
-                  {request.admin_notes && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Notes admin</p>
-                      <p className="font-medium">{request.admin_notes}</p>
-                    </div>
-                  )}
-
+                <div className="flex space-x-2">
                   {request.status === 'pending' && (
-                    <div className="flex gap-3 pt-4">
+                    <>
                       <Button
-                        onClick={() => handleStatusUpdate(request.id, 'approved')}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        size="sm"
+                        onClick={() => handleRequest(request.id, 'approved')}
+                        disabled={processingId === request.id}
+                        className="bg-green-600 hover:bg-green-700"
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <CheckCircle className="h-4 w-4 mr-1" />
                         Approuver
                       </Button>
                       <Button
-                        onClick={() => handleStatusUpdate(request.id, 'rejected')}
+                        size="sm"
                         variant="destructive"
-                        className="flex-1"
+                        onClick={() => handleRequest(request.id, 'rejected')}
+                        disabled={processingId === request.id}
                       >
-                        <XCircle className="h-4 w-4 mr-2" />
+                        <XCircle className="h-4 w-4 mr-1" />
                         Rejeter
                       </Button>
-                    </div>
+                    </>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {request.status === 'pending' && (
+                <div className="space-y-2">
+                  <Label htmlFor={`notes-${request.id}`}>Notes administratives</Label>
+                  <Textarea
+                    id={`notes-${request.id}`}
+                    placeholder="Ajouter des notes (optionnel)..."
+                    value={adminNotes[request.id] || ''}
+                    onChange={(e) => setAdminNotes({
+                      ...adminNotes,
+                      [request.id]: e.target.value
+                    })}
+                  />
+                </div>
+              )}
+              
+              {request.admin_notes && (
+                <div className="mt-4 p-3 bg-muted rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <span className="font-medium">Notes administratives:</span>
+                  </div>
+                  <p className="text-sm">{request.admin_notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {requests.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground">Aucune demande d'adhésion.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

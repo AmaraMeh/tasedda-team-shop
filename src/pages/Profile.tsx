@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,10 +9,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { User, LogOut, Settings, Package, Crown } from 'lucide-react';
-import type { User as AuthUser } from '@supabase/supabase-js';
+import { User, LogOut, Settings, Package, Crown, Edit, Save, Calendar, Briefcase, MapPin, Phone, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+
+const WILAYAS = [
+  "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar",
+  "Blida", "Bouira", "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger",
+  "Djelfa", "Jijel", "Sétif", "Saïda", "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma",
+  "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara", "Ouargla", "Oran", "El Bayadh",
+  "Illizi", "Bordj Bou Arreridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt", "El Oued",
+  "Khenchela", "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent",
+  "Ghardaïa", "Relizane", "Timimoun", "Bordj Badji Mokhtar", "Ouled Djellal", "Béni Abbès",
+  "In Salah", "In Guezzam", "Touggourt", "Djanet", "El M'Ghair", "El Meniaa"
+];
 
 interface Profile {
   id: string;
@@ -20,6 +34,10 @@ interface Profile {
   phone: string | null;
   address: string | null;
   city: string | null;
+  wilaya: string | null;
+  date_of_birth: string | null;
+  profession: string | null;
+  avatar_url: string | null;
 }
 
 interface TeamMember {
@@ -36,6 +54,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
   const [promoStats, setPromoStats] = useState<{used: number, pending: number}>({used: 0, pending: 0});
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -53,22 +72,6 @@ const Profile = () => {
 
   useEffect(() => {
     if (teamMember) {
-      // Statistiques sur le code promo
-      const fetchPromoStats = async () => {
-        // Nombre de personnes ayant utilisé le code promo et validées
-        const { count: used } = await supabase
-          .from('team_members')
-          .select('id', { count: 'exact', head: true })
-          .eq('invited_by', teamMember.id)
-          .eq('is_active', true);
-        // Nombre de personnes en attente de validation
-        const { count: pending } = await supabase
-          .from('team_join_requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('invited_by', teamMember.id)
-          .eq('status', 'pending');
-        setPromoStats({ used: used || 0, pending: pending || 0 });
-      };
       fetchPromoStats();
     }
   }, [teamMember]);
@@ -102,6 +105,28 @@ const Profile = () => {
       setTeamMember(data);
     } catch (error: any) {
       console.error('Error fetching team member:', error);
+    }
+  };
+
+  const fetchPromoStats = async () => {
+    if (!teamMember) return;
+    
+    try {
+      const { count: used } = await supabase
+        .from('team_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('invited_by', teamMember.id)
+        .eq('is_active', true);
+      
+      const { count: pending } = await supabase
+        .from('team_join_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('invited_by', teamMember.id)
+        .eq('status', 'pending');
+      
+      setPromoStats({ used: used || 0, pending: pending || 0 });
+    } catch (error) {
+      console.error('Error fetching promo stats:', error);
     }
   };
 
@@ -183,14 +208,21 @@ const Profile = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto" data-aos="fade-up">
+        <div className="max-w-6xl mx-auto" data-aos="fade-up">
+          {/* Profile Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-display font-bold mb-4">
-              Mon <span className="gold-text">Profil</span>
-            </h1>
-            <p className="text-muted-foreground">
-              Gérez vos informations personnelles et votre activité
-            </p>
+            <div className="flex flex-col items-center mb-6">
+              <Avatar className="h-24 w-24 mb-4 border-2 border-gold">
+                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarFallback className="bg-gold/20 text-gold text-xl">
+                  {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <h1 className="text-3xl font-display font-bold mb-2">
+                <span className="gold-text">{profile?.full_name || 'Utilisateur'}</span>
+              </h1>
+              <p className="text-muted-foreground">{profile?.email}</p>
+            </div>
           </div>
 
           <Tabs defaultValue="profile" className="w-full">
@@ -212,24 +244,42 @@ const Profile = () => {
             <TabsContent value="profile">
               <Card className="glass-effect border-gold/20">
                 <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Settings className="h-5 w-5 mr-2 text-gold" />
-                    Informations personnelles
-                  </CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="flex items-center">
+                      <Settings className="h-5 w-5 mr-2 text-gold" />
+                      Informations personnelles
+                    </CardTitle>
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditing(!editing)}
+                      className="border-gold/20 hover:border-gold"
+                    >
+                      {editing ? <Save className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+                      {editing ? 'Sauvegarder' : 'Modifier'}
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="fullName">Nom complet</Label>
+                      <Label htmlFor="fullName" className="flex items-center">
+                        <User className="h-4 w-4 mr-2" />
+                        Nom complet
+                      </Label>
                       <Input
                         id="fullName"
                         value={profile?.full_name || ''}
-                        onChange={(e) => updateProfile({ full_name: e.target.value })}
+                        onChange={(e) => editing && updateProfile({ full_name: e.target.value })}
+                        disabled={!editing}
                         className="bg-black/50 border-gold/20 focus:border-gold"
                       />
                     </div>
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email" className="flex items-center">
+                        <Mail className="h-4 w-4 mr-2" />
+                        Email
+                      </Label>
                       <Input
                         id="email"
                         value={profile?.email || ''}
@@ -237,35 +287,97 @@ const Profile = () => {
                         className="bg-black/50 border-gold/20 opacity-50"
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Téléphone</Label>
+                      <Label htmlFor="phone" className="flex items-center">
+                        <Phone className="h-4 w-4 mr-2" />
+                        Téléphone
+                      </Label>
                       <Input
                         id="phone"
                         value={profile?.phone || ''}
-                        onChange={(e) => updateProfile({ phone: e.target.value })}
+                        onChange={(e) => editing && updateProfile({ phone: e.target.value })}
+                        disabled={!editing}
                         className="bg-black/50 border-gold/20 focus:border-gold"
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="city">Ville</Label>
+                      <Label htmlFor="profession" className="flex items-center">
+                        <Briefcase className="h-4 w-4 mr-2" />
+                        Profession
+                      </Label>
+                      <Input
+                        id="profession"
+                        value={profile?.profession || ''}
+                        onChange={(e) => editing && updateProfile({ profession: e.target.value })}
+                        disabled={!editing}
+                        className="bg-black/50 border-gold/20 focus:border-gold"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dateOfBirth" className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Date de naissance
+                      </Label>
+                      <Input
+                        id="dateOfBirth"
+                        type="date"
+                        value={profile?.date_of_birth || ''}
+                        onChange={(e) => editing && updateProfile({ date_of_birth: e.target.value })}
+                        disabled={!editing}
+                        className="bg-black/50 border-gold/20 focus:border-gold"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Commune</Label>
                       <Input
                         id="city"
                         value={profile?.city || ''}
-                        onChange={(e) => updateProfile({ city: e.target.value })}
+                        onChange={(e) => editing && updateProfile({ city: e.target.value })}
+                        disabled={!editing}
                         className="bg-black/50 border-gold/20 focus:border-gold"
                       />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="wilaya">Wilaya</Label>
+                      <Select 
+                        value={profile?.wilaya || ''} 
+                        onValueChange={(value) => editing && updateProfile({ wilaya: value })}
+                        disabled={!editing}
+                      >
+                        <SelectTrigger className="bg-black/50 border-gold/20 focus:border-gold">
+                          <SelectValue placeholder="Sélectionnez votre wilaya" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WILAYAS.map((w) => (
+                            <SelectItem key={w} value={w}>{w}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="address">Adresse</Label>
-                    <Input
+                    <Label htmlFor="address" className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Adresse complète
+                    </Label>
+                    <Textarea
                       id="address"
                       value={profile?.address || ''}
-                      onChange={(e) => updateProfile({ address: e.target.value })}
-                      className="bg-black/50 border-gold/20 focus:border-gold"
+                      onChange={(e) => editing && updateProfile({ address: e.target.value })}
+                      disabled={!editing}
+                      className="bg-black/50 border-gold/20 focus:border-gold min-h-[100px]"
                     />
                   </div>
-                  <div className="pt-4">
+
+                  <div className="pt-4 border-t border-gold/20">
                     <Button onClick={handleSignOut} variant="destructive">
                       <LogOut className="h-4 w-4 mr-2" />
                       Se déconnecter
@@ -303,22 +415,16 @@ const Profile = () => {
                         <span>Commissions disponibles:</span>
                         <span className="font-bold text-green-500">{teamMember.available_commissions} DA</span>
                       </div>
-                      {teamMember && (
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span>Personnes ayant utilisé mon code :</span>
-                            <span className="font-bold text-gold">{promoStats.used}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>En attente de validation :</span>
-                            <span className="font-bold text-yellow-500">{promoStats.pending}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Mes cotisations :</span>
-                            <span className="font-bold text-green-500">{teamMember.total_commissions} DA</span>
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>Personnes ayant utilisé mon code :</span>
+                          <span className="font-bold text-gold">{promoStats.used}</span>
                         </div>
-                      )}
+                        <div className="flex justify-between">
+                          <span>En attente de validation :</span>
+                          <span className="font-bold text-yellow-500">{promoStats.pending}</span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
 
