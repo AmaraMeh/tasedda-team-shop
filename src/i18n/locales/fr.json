@@ -1,174 +1,146 @@
 
 {
   "common": {
-    "loading": "Chargement...",
-    "search": "Rechercher",
-    "submit": "Envoyer",
-    "cancel": "Annuler",
+    "products": "Produits",
+    "localSellers": "Vendeurs Locaux",
+    "wholesalers": "Grossistes",
+    "joinTeam": "Rejoindre l'Équipe",
+    "becomeSeller": "Devenir Vendeur",
+    "login": "Connexion",
+    "register": "S'inscrire",
+    "profile": "Profil",
+    "logout": "Déconnexion",
+    "cart": "Panier",
+    "admin": "Administration",
+    "teamSpace": "Espace Team",
+    "sellerSpace": "Espace Vendeur",
+    "backToHome": "Retour à l'accueil",
+    "submit": "Soumettre",
     "save": "Sauvegarder",
+    "cancel": "Annuler",
     "edit": "Modifier",
     "delete": "Supprimer",
     "confirm": "Confirmer",
-    "back": "Retour",
-    "next": "Suivant",
-    "previous": "Précédent",
-    "close": "Fermer",
-    "open": "Ouvrir",
-    "yes": "Oui",
-    "no": "Non"
-  },
-  "navigation": {
-    "home": "Accueil",
-    "products": "Produits",
-    "sellers": "Vendeurs",
-    "localSellers": "Vendeurs Locaux",
-    "wholesalers": "Grossistes",
-    "team": "Team",
-    "support": "Support",
-    "login": "Connexion",
-    "profile": "Profil",
-    "admin": "Admin",
-    "cart": "Panier"
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "phone": "Téléphone",
+    "email": "Email",
+    "address": "Adresse",
+    "city": "Ville",
+    "wilaya": "Wilaya"
   },
   "home": {
     "hero": {
-      "title": "LION by Tasedda",
-      "subtitle": "Votre destination e-commerce premium en Algérie",
-      "description": "Découvrez une expérience d'achat unique avec notre sélection de vêtements premium, notre système d'affiliation Team Lion, et nos boutiques partenaires Tasedda locales."
+      "title": "Lion",
+      "subtitle": "E-commerce de Vêtements Premium en Algérie",
+      "description": "Découvrez une expérience shopping unique avec notre sélection de vêtements premium, notre système d'affiliation Team Lion, et nos boutiques partenaires Tasedda locales."
     },
-    "welcome": "Bienvenue chez LION by Tasedda",
-    "subtitle": "Votre destination pour les produits de qualité",
     "featuredProducts": {
       "title": "Produits en Vedette",
-      "subtitle": "Découvrez notre sélection exceptionnelle"
-    },
-    "cta": {
-      "shopNow": "Acheter Maintenant",
-      "learnMore": "En Savoir Plus"
+      "subtitle": "Découvrez notre sélection de produits populaires"
     }
-  },
-  "products": {
-    "title": "Nos Produits",
-    "searchPlaceholder": "Rechercher un produit...",
-    "filter": "Filtrer",
-    "category": "Catégorie",
-    "allCategories": "Toutes les catégories",
-    "price": "Prix",
-    "availability": "Disponibilité",
-    "inStock": "En stock",
-    "outOfStock": "Rupture de stock",
-    "addToCart": "Ajouter au panier",
-    "viewDetails": "Voir les détails",
-    "noResults": "Aucun produit trouvé"
-  },
-  "localSellers": {
-    "title": "Vendeurs",
-    "description": "Découvrez nos vendeurs locaux de confiance dans votre région",
-    "viewShop": "Voir la boutique",
-    "contactSeller": "Contacter le vendeur"
-  },
-  "wholesalers": {
-    "title": "Grossistes",
-    "description": "Achetez en gros auprès de nos grossistes partenaires",
-    "negotiatePrice": "Négocier le prix",
-    "contactWhatsApp": "Contacter via WhatsApp",
-    "bulkOrders": "Commandes en gros"
-  },
-  "team": {
-    "title": "Team Tasedda",
-    "subtitle": "Rejoignez notre équipe d'ambassadeurs et gagnez des commissions",
-    "benefits": {
-      "title": "Avantages",
-      "commission": "Commissions attractives",
-      "training": "Formation gratuite",
-      "support": "Support 24/7",
-      "flexibility": "Flexibilité totale"
-    },
-    "join": {
-      "title": "Rejoindre l'équipe",
-      "button": "Rejoindre maintenant",
-      "requirements": "Conditions requises"
-    },
-    "advantages": {
-      "title": "Avantages de la Team",
-      "commissions": "Commissions",
-      "training": "Formation",
-      "support": "Support"
-    }
-  },
-  "auth": {
-    "signIn": "Connexion",
-    "signUp": "Inscription",
-    "email": "Email",
-    "password": "Mot de passe",
-    "confirmPassword": "Confirmer le mot de passe",
-    "fullName": "Nom complet",
-    "phone": "Téléphone",
-    "address": "Adresse",
-    "city": "Ville",
-    "forgotPassword": "Mot de passe oublié ?",
-    "dontHaveAccount": "Pas de compte ?",
-    "alreadyHaveAccount": "Déjà un compte ?",
-    "signInButton": "Se connecter",
-    "signUpButton": "Créer un compte"
-  },
-  "profile": {
-    "title": "Mon Profil",
-    "personalInfo": "Informations personnelles",
-    "orders": "Mes commandes",
-    "settings": "Paramètres",
-    "logout": "Se déconnecter"
-  },
-  "cart": {
-    "title": "Panier",
-    "empty": "Votre panier est vide",
-    "total": "Total",
-    "checkout": "Commander",
-    "quantity": "Quantité",
-    "remove": "Supprimer",
-    "continue": "Continuer les achats"
-  },
-  "support": {
-    "title": "Centre d'Aide",
-    "contact": "Nous Contacter",
-    "shipping": "Livraison",
-    "returns": "Retours",
-    "faq": "FAQ",
-    "helpCenter": "Centre d'Aide"
   },
   "footer": {
-    "brand": {
-      "description": "LION by Tasedda - Votre destination pour les produits de qualité en Algérie"
-    },
-    "quickLinks": "Liens Rapides",
+    "description": "Votre destination premium pour la mode en Algérie. Découvrez des vêtements de qualité avec notre système d'affiliation unique.",
+    "shop": "Boutique",
     "team": "Team Tasedda",
-    "contact": "Contact",
-    "rights": "Tous droits réservés.",
-    "followUs": "Suivez-nous"
+    "support": "Support",
+    "contributorOfMonth": "Contributeur du Mois",
+    "upcomingEvent": "Événement à Venir",
+    "copyright": "Tous droits réservés. Fait avec ❤️ en Algérie"
+  },
+  "team": {
+    "title": "Rejoindre Team Lion",
+    "description": "Rejoignez notre équipe et bénéficiez de commissions exclusives",
+    "joinTeam": "Rejoindre l'Équipe",
+    "advantages": "Avantages",
+    "commissions": "Commissions",
+    "advantagesTitle": "Avantages Team Lion",
+    "advantagesDesc": "Découvrez tous les avantages d'être membre de notre équipe",
+    "commissionsTitle": "Système de Commissions",
+    "commissionsDesc": "Gagnez des commissions sur chaque vente réalisée",
+    "benefits": {
+      "commission": "Commission de 5% sur toutes les ventes",
+      "promoCode": "Code promo personnel",
+      "support": "Support dédié",
+      "training": "Formation gratuite",
+      "community": "Communauté active"
+    }
   },
   "seller": {
-    "becomeaSeller": "Devenir Vendeur",
-    "sellerTypes": {
-      "normal": "Vendeur Normal",
-      "wholesale": "Grossiste"
+    "title": "Devenir Vendeur",
+    "description": "Ouvrez votre boutique en ligne avec Lion",
+    "hero": {
+      "title": "Ouvrez Votre",
+      "shop": "Boutique",
+      "online": "en Ligne",
+      "description": "Rejoignez notre plateforme et vendez vos produits à travers toute l'Algérie avec notre système avancé de gestion de boutique.",
+      "pricing": "700 DA/mois après essai gratuit"
     },
-    "normalSeller": {
-      "title": "Vendeur Normal",
-      "description": "Vendez vos produits avec des prix normaux",
-      "features": [
-        "Affichage des prix",
-        "Commandes directes",
-        "Gestion simplifiée"
-      ]
+    "features": {
+      "trial": "Essai Gratuit de 30 Jours",
+      "trialDesc": "Testez toutes nos fonctionnalités sans engagement pendant un mois complet",
+      "support": "Support Technique 24/7",
+      "supportDesc": "Notre équipe technique est disponible pour vous accompagner à tout moment",
+      "pricing": "Tarification Transparente",
+      "pricingDesc": "Seulement 700 DA par mois, sans frais cachés ni commissions sur vos ventes",
+      "shop": "Boutique personnalisée",
+      "commission": "0% de commission",
+      "analytics": "Analyses détaillées"
     },
-    "wholesaler": {
-      "title": "Grossiste",
-      "description": "Vente en gros avec négociation de prix",
-      "features": [
-        "Produits sans prix affichés",
-        "Négociation via chat",
-        "Grandes quantités"
-      ]
-    }
+    "types": {
+      "title": "Choisissez Votre",
+      "choose": "Type de Compte",
+      "description": "Sélectionnez le type de compte vendeur qui correspond le mieux à vos besoins",
+      "normal": {
+        "title": "Vendeur Standard",
+        "description": "Parfait pour les particuliers et petites entreprises",
+        "feature1": "Boutique personnalisée",
+        "feature2": "Gestion des stocks",
+        "feature3": "Support client"
+      },
+      "wholesale": {
+        "title": "Grossiste",
+        "description": "Pour les entreprises de vente en gros",
+        "feature1": "Tarifs préférentiels",
+        "feature2": "Ventes en volume",
+        "feature3": "Support prioritaire"
+      }
+    },
+    "becomeSeller": "Devenir Vendeur"
+  },
+  "support": {
+    "helpCenter": "Centre d'Aide",
+    "contact": "Contact",
+    "shipping": "Livraison",
+    "returns": "Retours",
+    "helpTitle": "Centre d'Aide",
+    "helpDesc": "Trouvez des réponses à vos questions",
+    "contactTitle": "Nous Contacter",
+    "contactDesc": "Notre équipe est là pour vous aider",
+    "shippingTitle": "Informations de Livraison",
+    "shippingDesc": "Tout sur nos méthodes de livraison",
+    "returnsTitle": "Politique de Retour",
+    "returnsDesc": "Conditions de retour et d'échange",
+    "faq": "Questions Fréquemment Posées",
+    "email": "support@lion-dz.com",
+    "phone": "+213 XXX XXX XXX",
+    "workingHours": "Lun-Ven: 9h-17h"
+  },
+  "admin": {
+    "homepageContent": "Contenu de la Page d'Accueil",
+    "contributorTitle": "Contributeur du Mois",
+    "eventTitle": "Événement à Venir",
+    "manageHomepage": "Gérer le Contenu de la Page d'Accueil",
+    "activeContent": "Contenu Actif",
+    "contributor": "Contributeur",
+    "event": "Événement",
+    "sales": "ventes",
+    "eventDate": "Date de l'événement",
+    "eventLocation": "Lieu de l'événement"
   }
 }

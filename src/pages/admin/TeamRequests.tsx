@@ -21,7 +21,7 @@ interface TeamRequest {
     full_name: string;
     email: string;
     phone: string;
-  };
+  } | null;
 }
 
 const TeamRequests = () => {
@@ -90,12 +90,18 @@ const TeamRequests = () => {
 
       if (updateError) throw updateError;
 
-      // If approved, create team member
+      // If approved, create team member with generated promo code
       if (action === 'approved') {
+        const { data: promoCode, error: promoError } = await supabase
+          .rpc('generate_promo_code');
+
+        if (promoError) throw promoError;
+
         const { error: memberError } = await supabase
           .from('team_members')
           .insert({
             user_id: request.user_id,
+            promo_code: promoCode,
             invited_by: request.invited_by,
             is_active: true
           });
@@ -105,7 +111,7 @@ const TeamRequests = () => {
 
       toast({
         title: action === 'approved' ? "Demande approuvée" : "Demande rejetée",
-        description: `La demande de ${request.profiles.full_name} a été ${action === 'approved' ? 'approuvée' : 'rejetée'}.`,
+        description: `La demande de ${request.profiles?.full_name || 'cet utilisateur'} a été ${action === 'approved' ? 'approuvée' : 'rejetée'}.`,
       });
 
       fetchRequests();
@@ -138,9 +144,9 @@ const TeamRequests = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Demandes d'Adhésion Team</h1>
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-xl sm:text-2xl font-bold">Demandes d'Adhésion Team</h1>
         <div className="text-sm text-muted-foreground">
           {requests.filter(r => r.status === 'pending').length} en attente
         </div>
@@ -148,29 +154,34 @@ const TeamRequests = () => {
 
       <div className="grid gap-4">
         {requests.map((request) => (
-          <Card key={request.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center space-x-2">
-                    <span>{request.profiles.full_name}</span>
+          <Card key={request.id} className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-base sm:text-lg">
+                    <span className="truncate">{request.profiles?.full_name || 'Utilisateur inconnu'}</span>
                     {getStatusBadge(request.status)}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {request.profiles.email} • {request.profiles.phone}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Demande créée le {new Date(request.created_at).toLocaleDateString()}
-                  </p>
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm text-muted-foreground truncate">
+                      {request.profiles?.email || 'Email non disponible'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {request.profiles?.phone || 'Téléphone non disponible'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Demande créée le {new Date(request.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                   {request.status === 'pending' && (
                     <>
                       <Button
                         size="sm"
                         onClick={() => handleRequest(request.id, 'approved')}
                         disabled={processingId === request.id}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Approuver
@@ -180,6 +191,7 @@ const TeamRequests = () => {
                         variant="destructive"
                         onClick={() => handleRequest(request.id, 'rejected')}
                         disabled={processingId === request.id}
+                        className="w-full sm:w-auto"
                       >
                         <XCircle className="h-4 w-4 mr-1" />
                         Rejeter
@@ -189,7 +201,7 @@ const TeamRequests = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {request.status === 'pending' && (
                 <div className="space-y-2">
                   <Label htmlFor={`notes-${request.id}`}>Notes administratives</Label>
@@ -201,6 +213,7 @@ const TeamRequests = () => {
                       ...adminNotes,
                       [request.id]: e.target.value
                     })}
+                    className="resize-none"
                   />
                 </div>
               )}
@@ -211,7 +224,7 @@ const TeamRequests = () => {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     <span className="font-medium">Notes administratives:</span>
                   </div>
-                  <p className="text-sm">{request.admin_notes}</p>
+                  <p className="text-sm break-words">{request.admin_notes}</p>
                 </div>
               )}
             </CardContent>

@@ -80,7 +80,7 @@ const Profile = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, full_name, phone, address, city, wilaya, date_of_birth, profession, avatar_url')
         .eq('id', userId)
         .single();
 
@@ -207,63 +207,63 @@ const Profile = () => {
     <div className="min-h-screen bg-black">
       <Header />
       
-      <main className="container mx-auto px-4 py-20">
+      <main className="container mx-auto px-4 py-10 sm:py-20">
         <div className="max-w-6xl mx-auto" data-aos="fade-up">
-          {/* Profile Header */}
-          <div className="text-center mb-8">
+          {/* Profile Header - Mobile optimized */}
+          <div className="text-center mb-6 sm:mb-8">
             <div className="flex flex-col items-center mb-6">
-              <Avatar className="h-24 w-24 mb-4 border-2 border-gold">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 mb-4 border-2 border-gold">
                 <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="bg-gold/20 text-gold text-xl">
+                <AvatarFallback className="bg-gold/20 text-gold text-lg sm:text-xl">
                   {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <h1 className="text-3xl font-display font-bold mb-2">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold mb-2">
                 <span className="gold-text">{profile?.full_name || 'Utilisateur'}</span>
               </h1>
-              <p className="text-muted-foreground">{profile?.email}</p>
+              <p className="text-muted-foreground text-sm sm:text-base">{profile?.email}</p>
             </div>
           </div>
 
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8 bg-black/50">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <User className="h-4 w-4 mr-2" />
-                Profil
+            <TabsList className="grid w-full grid-cols-3 mb-6 sm:mb-8 bg-black/50">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-gold data-[state=active]:text-black text-xs sm:text-sm">
+                <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Profil</span>
               </TabsTrigger>
-              <TabsTrigger value="team" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <Crown className="h-4 w-4 mr-2" />
-                Team Tasedda
+              <TabsTrigger value="team" className="data-[state=active]:bg-gold data-[state=active]:text-black text-xs sm:text-sm">
+                <Crown className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Team</span>
               </TabsTrigger>
-              <TabsTrigger value="orders" className="data-[state=active]:bg-gold data-[state=active]:text-black">
-                <Package className="h-4 w-4 mr-2" />
-                Commandes
+              <TabsTrigger value="orders" className="data-[state=active]:bg-gold data-[state=active]:text-black text-xs sm:text-sm">
+                <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Commandes</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="profile">
               <Card className="glass-effect border-gold/20">
                 <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="flex items-center">
-                      <Settings className="h-5 w-5 mr-2 text-gold" />
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <CardTitle className="flex items-center text-base sm:text-lg">
+                      <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gold" />
                       Informations personnelles
                     </CardTitle>
                     <Button
                       variant="outline"
                       onClick={() => setEditing(!editing)}
-                      className="border-gold/20 hover:border-gold"
+                      className="border-gold/20 hover:border-gold text-sm"
                     >
-                      {editing ? <Save className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+                      {editing ? <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-2" /> : <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />}
                       {editing ? 'Sauvegarder' : 'Modifier'}
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <CardContent className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="fullName" className="flex items-center">
-                        <User className="h-4 w-4 mr-2" />
+                      <Label htmlFor="fullName" className="flex items-center text-sm">
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                         Nom complet
                       </Label>
                       <Input
@@ -271,26 +271,26 @@ const Profile = () => {
                         value={profile?.full_name || ''}
                         onChange={(e) => editing && updateProfile({ full_name: e.target.value })}
                         disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold"
+                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2" />
+                      <Label htmlFor="email" className="flex items-center text-sm">
+                        <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                         Email
                       </Label>
                       <Input
                         id="email"
                         value={profile?.email || ''}
                         disabled
-                        className="bg-black/50 border-gold/20 opacity-50"
+                        className="bg-black/50 border-gold/20 opacity-50 text-sm"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2" />
+                      <Label htmlFor="phone" className="flex items-center text-sm">
+                        <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                         Téléphone
                       </Label>
                       <Input
@@ -298,13 +298,13 @@ const Profile = () => {
                         value={profile?.phone || ''}
                         onChange={(e) => editing && updateProfile({ phone: e.target.value })}
                         disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold"
+                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="profession" className="flex items-center">
-                        <Briefcase className="h-4 w-4 mr-2" />
+                      <Label htmlFor="profession" className="flex items-center text-sm">
+                        <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                         Profession
                       </Label>
                       <Input
@@ -312,13 +312,13 @@ const Profile = () => {
                         value={profile?.profession || ''}
                         onChange={(e) => editing && updateProfile({ profession: e.target.value })}
                         disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold"
+                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth" className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2" />
+                      <Label htmlFor="dateOfBirth" className="flex items-center text-sm">
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                         Date de naissance
                       </Label>
                       <Input
@@ -327,31 +327,31 @@ const Profile = () => {
                         value={profile?.date_of_birth || ''}
                         onChange={(e) => editing && updateProfile({ date_of_birth: e.target.value })}
                         disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold"
+                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="city">Commune</Label>
+                      <Label htmlFor="city" className="text-sm">Commune</Label>
                       <Input
                         id="city"
                         value={profile?.city || ''}
                         onChange={(e) => editing && updateProfile({ city: e.target.value })}
                         disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold"
+                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="wilaya">Wilaya</Label>
+                      <Label htmlFor="wilaya" className="text-sm">Wilaya</Label>
                       <Select 
                         value={profile?.wilaya || ''} 
                         onValueChange={(value) => editing && updateProfile({ wilaya: value })}
                         disabled={!editing}
                       >
-                        <SelectTrigger className="bg-black/50 border-gold/20 focus:border-gold">
+                        <SelectTrigger className="bg-black/50 border-gold/20 focus:border-gold text-sm">
                           <SelectValue placeholder="Sélectionnez votre wilaya" />
                         </SelectTrigger>
                         <SelectContent>
@@ -364,8 +364,8 @@ const Profile = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2" />
+                    <Label htmlFor="address" className="flex items-center text-sm">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                       Adresse complète
                     </Label>
                     <Textarea
@@ -373,13 +373,13 @@ const Profile = () => {
                       value={profile?.address || ''}
                       onChange={(e) => editing && updateProfile({ address: e.target.value })}
                       disabled={!editing}
-                      className="bg-black/50 border-gold/20 focus:border-gold min-h-[100px]"
+                      className="bg-black/50 border-gold/20 focus:border-gold min-h-[80px] text-sm resize-none"
                     />
                   </div>
 
                   <div className="pt-4 border-t border-gold/20">
-                    <Button onClick={handleSignOut} variant="destructive">
-                      <LogOut className="h-4 w-4 mr-2" />
+                    <Button onClick={handleSignOut} variant="destructive" className="text-sm">
+                      <LogOut className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                       Se déconnecter
                     </Button>
                   </div>
@@ -389,39 +389,39 @@ const Profile = () => {
 
             <TabsContent value="team">
               {teamMember ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <Card className="glass-effect border-gold/20">
                     <CardHeader>
-                      <CardTitle className="text-gold">Mes Statistiques</CardTitle>
+                      <CardTitle className="text-gold text-base sm:text-lg">Mes Statistiques</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between">
+                    <CardContent className="space-y-3 sm:space-y-4">
+                      <div className="flex justify-between text-sm sm:text-base">
                         <span>Code Promo:</span>
                         <span className="font-bold text-gold">{teamMember.promo_code}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm sm:text-base">
                         <span>Rang:</span>
                         <span className="font-bold">{teamMember.rank}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm sm:text-base">
                         <span>Ventes totales:</span>
                         <span className="font-bold">{teamMember.total_sales}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm sm:text-base">
                         <span>Commissions totales:</span>
                         <span className="font-bold text-gold">{teamMember.total_commissions} DA</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm sm:text-base">
                         <span>Commissions disponibles:</span>
                         <span className="font-bold text-green-500">{teamMember.available_commissions} DA</span>
                       </div>
                       <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Personnes ayant utilisé mon code :</span>
+                        <div className="flex justify-between text-sm sm:text-base">
+                          <span>Personnes avec mon code :</span>
                           <span className="font-bold text-gold">{promoStats.used}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>En attente de validation :</span>
+                        <div className="flex justify-between text-sm sm:text-base">
+                          <span>En attente :</span>
                           <span className="font-bold text-yellow-500">{promoStats.pending}</span>
                         </div>
                       </div>
@@ -430,31 +430,31 @@ const Profile = () => {
 
                   <Card className="glass-effect border-gold/20">
                     <CardHeader>
-                      <CardTitle className="text-gold">Actions</CardTitle>
+                      <CardTitle className="text-gold text-base sm:text-lg">Actions</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-3 sm:space-y-4">
                       <Button 
                         onClick={requestWithdrawal}
                         disabled={teamMember.available_commissions <= 0}
-                        className="w-full btn-gold"
+                        className="w-full btn-gold text-sm sm:text-base"
                       >
                         Demander un retrait
                       </Button>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Les retraits sont traités manuellement par l'administration.
                       </p>
                     </CardContent>
                   </Card>
                 </div>
               ) : (
-                <Card className="glass-effect border-gold/20 text-center p-8">
+                <Card className="glass-effect border-gold/20 text-center p-6 sm:p-8">
                   <CardContent>
-                    <Crown className="h-16 w-16 mx-auto mb-4 text-gold" />
-                    <h3 className="text-xl font-semibold mb-2">Rejoignez la Team Tasedda</h3>
-                    <p className="text-muted-foreground mb-4">
+                    <Crown className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-gold" />
+                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Rejoignez la Team Tasedda</h3>
+                    <p className="text-muted-foreground mb-4 text-sm sm:text-base">
                       Vous n'êtes pas encore membre de notre équipe d'ambassadeurs.
                     </p>
-                    <Button onClick={() => navigate('/team')} className="btn-gold">
+                    <Button onClick={() => navigate('/team')} className="btn-gold text-sm sm:text-base">
                       Rejoindre maintenant
                     </Button>
                   </CardContent>
@@ -465,10 +465,10 @@ const Profile = () => {
             <TabsContent value="orders">
               <Card className="glass-effect border-gold/20">
                 <CardHeader>
-                  <CardTitle>Mes Commandes</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">Mes Commandes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm sm:text-base">
                     Aucune commande pour le moment.
                   </p>
                 </CardContent>

@@ -109,23 +109,23 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gold/20 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex h-14 sm:h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 bg-gradient-to-r from-gold to-yellow-600 rounded-full flex items-center justify-center">
-              <span className="text-black font-bold text-sm">L</span>
+            <div className="h-7 w-7 sm:h-8 sm:w-8 bg-gradient-to-r from-gold to-yellow-600 rounded-full flex items-center justify-center">
+              <span className="text-black font-bold text-xs sm:text-sm">L</span>
             </div>
-            <span className="font-bold text-xl gold-text">Lion</span>
+            <span className="font-bold text-lg sm:text-xl gold-text">Lion</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden lg:flex items-center space-x-4 xl:space-x-6">
             {navigationItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
-                className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-2"
+                className="text-sm font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-2 whitespace-nowrap"
               >
                 {item.icon && <item.icon className="h-4 w-4" />}
                 {item.label}
@@ -134,19 +134,21 @@ const Header = () => {
           </nav>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-4">
-            <LanguageSelector />
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="hidden sm:block">
+              <LanguageSelector />
+            </div>
             
             {/* Cart */}
             <Button
               variant="ghost"
               size="icon"
-              className="relative hover:bg-gold/10"
+              className="relative hover:bg-gold/10 h-9 w-9 sm:h-10 sm:w-10"
               onClick={handleCartClick}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
               {getCartCount() > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-gold text-black text-xs">
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center bg-gold text-black text-xs">
                   {getCartCount()}
                 </Badge>
               )}
@@ -156,11 +158,11 @@ const Header = () => {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hover:bg-gold/10">
-                    <User className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="hover:bg-gold/10 h-9 w-9 sm:h-10 sm:w-10">
+                    <User className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-black border-gold/20">
+                <DropdownMenuContent align="end" className="w-48 sm:w-56 bg-black border-gold/20">
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <Settings className="mr-2 h-4 w-4" />
                     {t('common.profile')}
@@ -194,7 +196,7 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={() => navigate('/auth')} className="btn-gold">
+              <Button onClick={() => navigate('/auth')} className="btn-gold text-sm px-3 py-2">
                 {t('common.login')}
               </Button>
             )}
@@ -202,24 +204,29 @@ const Header = () => {
             {/* Mobile menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden hover:bg-gold/10">
-                  <Menu className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="lg:hidden hover:bg-gold/10 h-9 w-9">
+                  <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-black border-gold/20">
-                <nav className="flex flex-col space-y-4 mt-8">
-                  {navigationItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      className="text-lg font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-3 p-2"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {item.icon && <item.icon className="h-5 w-5" />}
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-black border-gold/20">
+                <div className="flex flex-col h-full">
+                  <div className="mb-6">
+                    <LanguageSelector />
+                  </div>
+                  <nav className="flex flex-col space-y-4">
+                    {navigationItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className="text-lg font-medium text-muted-foreground hover:text-gold transition-colors flex items-center gap-3 p-2"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {item.icon && <item.icon className="h-5 w-5" />}
+                        {item.label}
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
               </SheetContent>
             </Sheet>
           </div>

@@ -10,6 +10,7 @@ import { ShoppingBag, Eye, Heart } from 'lucide-react';
 interface Product {
   id: string;
   name: string;
+  description?: string;
   price: number;
   original_price?: number;
   image: string;
@@ -18,6 +19,7 @@ interface Product {
   inStock: boolean;
   stock_quantity?: number;
   isNew?: boolean;
+  is_featured?: boolean;
 }
 
 interface ProductCardProps {
@@ -49,7 +51,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
     }
     
     try {
-      addToCart(product, 1);
+      // Convert to cart-compatible format
+      const cartProduct = {
+        ...product,
+        description: product.description || '',
+        is_featured: product.is_featured || false
+      };
+      addToCart(cartProduct, 1);
       toast({
         title: "Produit ajouté",
         description: `${product.name} a été ajouté à votre panier`,
@@ -84,71 +92,71 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2">
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
           {product.isNew && (
-            <Badge className="bg-gold text-black">
+            <Badge className="bg-gold text-black text-xs">
               Nouveau
             </Badge>
           )}
           {discount > 0 && (
-            <Badge variant="destructive">
+            <Badge variant="destructive" className="text-xs">
               -{discount}%
             </Badge>
           )}
           {!product.inStock && (
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="text-xs">
               Rupture
             </Badge>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Actions - Mobile optimized */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <Button
             size="icon"
             variant="secondary"
-            className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+            className="h-7 w-7 bg-background/80 backdrop-blur-sm"
             onClick={() => setIsLiked(!isLiked)}
           >
-            <Heart className={`h-4 w-4 ${isLiked ? 'fill-gold text-gold' : ''}`} />
+            <Heart className={`h-3 w-3 ${isLiked ? 'fill-gold text-gold' : ''}`} />
           </Button>
           <Button
             size="icon"
             variant="secondary"
-            className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+            className="h-7 w-7 bg-background/80 backdrop-blur-sm"
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="h-3 w-3" />
           </Button>
         </div>
 
-        {/* Overlay CTA */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Overlay CTA - Mobile optimized */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <Button 
-            className="w-full btn-gold" 
+            className="w-full btn-gold text-sm py-2" 
             disabled={!product.inStock}
             onClick={handleAddToCart}
           >
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            {product.inStock ? 'Ajouter au panier' : 'Rupture de stock'}
+            <ShoppingBag className="h-3 w-3 mr-2" />
+            {product.inStock ? 'Ajouter' : 'Rupture'}
           </Button>
         </div>
       </div>
 
-      <CardContent className="p-4">
+      <CardContent className="p-3">
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
             {product.category}
           </p>
-          <h3 className="font-semibold text-white line-clamp-2 hover:text-gold transition-colors cursor-pointer">
+          <h3 className="font-semibold text-white line-clamp-2 hover:text-gold transition-colors cursor-pointer text-sm">
             {product.name}
           </h3>
           
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-gold">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-base font-bold text-gold">
               {product.price.toLocaleString()} DA
             </span>
             {product.original_price && (
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="text-xs text-muted-foreground line-through">
                 {product.original_price.toLocaleString()} DA
               </span>
             )}
