@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       // Convert to cart-compatible format
       const cartProduct = {
         ...product,
+        image_url: product.image_url || product.image || '/placeholder.svg',
         description: product.description || '',
         is_featured: product.is_featured || false
       };
@@ -124,8 +126,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
             size="icon"
             variant="secondary"
             className="h-7 w-7 bg-background/80 backdrop-blur-sm"
+            asChild
           >
-            <Eye className="h-3 w-3" />
+            <Link to={`/product/${product.id}`}>
+              <Eye className="h-3 w-3" />
+            </Link>
           </Button>
         </div>
 
@@ -147,9 +152,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
           <p className="text-xs text-muted-foreground uppercase tracking-wide">
             {product.category}
           </p>
-          <h3 className="font-semibold text-white line-clamp-2 hover:text-gold transition-colors cursor-pointer text-sm">
-            {product.name}
-          </h3>
+          <Link to={`/product/${product.id}`}>
+            <h3 className="font-semibold text-white line-clamp-2 hover:text-gold transition-colors cursor-pointer text-sm">
+              {product.name}
+            </h3>
+          </Link>
           
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-base font-bold text-gold">

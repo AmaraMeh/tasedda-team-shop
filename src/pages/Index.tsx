@@ -18,14 +18,10 @@ const Index = () => {
   const { user } = useAuth();
   const [taseddaProducts, setTaseddaProducts] = useState<Product[]>([]);
   const [sellerProducts, setSellerProducts] = useState<Product[]>([]);
-  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProducts();
-    if (user) {
-      checkUserRole();
-    }
-  }, [user]);
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -78,57 +74,10 @@ const Index = () => {
     }
   };
 
-  const checkUserRole = async () => {
-    if (!user) return;
-
-    try {
-      // Check if admin
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.is_admin) {
-        setUserRole('admin');
-        return;
-      }
-
-      // Check if team member
-      const { data: teamMember } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (teamMember) {
-        setUserRole('team');
-        return;
-      }
-
-      // Check if seller
-      const { data: seller } = await supabase
-        .from('sellers')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (seller) {
-        setUserRole('seller');
-        return;
-      }
-
-      setUserRole('user');
-    } catch (error) {
-      console.error('Error checking user role:', error);
-      setUserRole('user');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-black">
       <Header />
-      <HeroSection showTeamCTA={userRole !== 'team'} showSellerCTA={userRole !== 'seller'} />
+      <HeroSection showTeamCTA={false} showSellerCTA={false} />
       
       {/* Produits LION by Tasedda Section */}
       {taseddaProducts.length > 0 && (

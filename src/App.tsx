@@ -7,6 +7,7 @@ import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Profile from '@/pages/Profile';
 import Products from '@/pages/Products';
+import ProductDetail from '@/components/ProductDetail';
 import Cart from '@/pages/Cart';
 import LocalSellers from '@/pages/LocalSellers';
 import Wholesalers from '@/pages/Wholesalers';
@@ -38,6 +39,7 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/local-sellers" element={<LocalSellers />} />
               <Route path="/wholesalers" element={<Wholesalers />} />

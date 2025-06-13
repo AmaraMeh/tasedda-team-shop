@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
+import InvitationCodeModal from '@/components/InvitationCodeModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +16,8 @@ const Team = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [isTeamMember, setIsTeamMember] = useState(false);
   const [hasRequest, setHasRequest] = useState(false);
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
+  const [validInvitationCode, setValidInvitationCode] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -55,6 +58,11 @@ const Team = () => {
     } finally {
       setDataLoading(false);
     }
+  };
+
+  const handleInvitationSuccess = () => {
+    setShowInvitationModal(false);
+    joinTeam();
   };
 
   const joinTeam = async () => {
@@ -292,23 +300,30 @@ const Team = () => {
                   Prêt à commencer ?
                 </CardTitle>
                 <p className="text-muted-foreground">
-                  Rejoignez la Team Lion et commencez à gagner des commissions dès aujourd'hui
+                  Rejoignez la Team Lion avec un code d'invitation
                 </p>
               </CardHeader>
               <CardContent>
                 <Button 
-                  onClick={joinTeam} 
+                  onClick={() => setShowInvitationModal(true)}
                   className="w-full btn-gold" 
                   disabled={dataLoading}
                 >
                   <Crown className="h-4 w-4 mr-2" />
-                  {dataLoading ? "Inscription..." : "Rejoindre la Team Lion"}
+                  {dataLoading ? "Chargement..." : "Rejoindre la Team Lion"}
                 </Button>
               </CardContent>
             </Card>
           </div>
         </section>
       </main>
+
+      <InvitationCodeModal
+        isOpen={showInvitationModal}
+        onClose={() => setShowInvitationModal(false)}
+        type="team"
+        onSuccess={handleInvitationSuccess}
+      />
 
       <Footer />
     </div>

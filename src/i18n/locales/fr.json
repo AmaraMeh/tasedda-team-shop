@@ -33,6 +33,12 @@
     "city": "Ville",
     "wilaya": "Wilaya"
   },
+  "navigation": {
+    "home": "Accueil",
+    "products": "Produits",
+    "localSellers": "Vendeurs Locaux",
+    "wholesalers": "Grossistes"
+  },
   "home": {
     "hero": {
       "title": "Lion",
@@ -63,6 +69,12 @@
     "advantagesDesc": "Découvrez tous les avantages d'être membre de notre équipe",
     "commissionsTitle": "Système de Commissions",
     "commissionsDesc": "Gagnez des commissions sur chaque vente réalisée",
+    "join": {
+      "button": "Rejoindre maintenant"
+    },
+    "advantages": {
+      "title": "Avantages exclusifs"
+    },
     "benefits": {
       "commission": "Commission de 5% sur toutes les ventes",
       "promoCode": "Code promo personnel",

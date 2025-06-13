@@ -2,9 +2,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
+import CheckoutForm from '@/components/ui/checkout-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,11 +14,10 @@ import { ShoppingCart, Minus, Plus, Trash2, Tag, ArrowLeft } from 'lucide-react'
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { items, updateQuantity, removeFromCart, getCartTotal, getCartCount, applyPromoCode, promoCode, discount, clearCart } = useCart();
+  const { items, updateQuantity, removeFromCart, getCartTotal, getCartCount, applyPromoCode, promoCode, discount } = useCart();
   const [promoInput, setPromoInput] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
   const { toast } = useToast();
 
   const handleApplyPromo = async () => {
@@ -44,39 +43,35 @@ const Cart = () => {
     setIsApplyingPromo(false);
   };
 
-  const handleCheckout = async () => {
-    if (!user) {
-      toast({
-        title: "Connexion requise",
-        description: "Veuillez vous connecter pour passer commande",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
-    if (items.length === 0) {
-      toast({
-        title: "Panier vide",
-        description: "Ajoutez des produits à votre panier",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsCheckingOut(true);
-    
-    // Simulation du processus de commande
-    setTimeout(() => {
-      toast({
-        title: "Commande passée avec succès",
-        description: "Vous recevrez un email de confirmation",
-      });
-      clearCart();
-      navigate('/');
-      setIsCheckingOut(false);
-    }, 2000);
+  const handleCheckoutSuccess = () => {
+    setShowCheckout(false);
+    navigate('/');
   };
+
+  if (showCheckout) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Header />
+        
+        <main className="container mx-auto px-4 py-20">
+          <div className="max-w-2xl mx-auto">
+            <Button
+              variant="outline"
+              onClick={() => setShowCheckout(false)}
+              className="mb-6 border-gold/20 text-white hover:bg-gold/10"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au panier
+            </Button>
+            
+            <CheckoutForm onSuccess={handleCheckoutSuccess} />
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black">
@@ -223,11 +218,10 @@ const Cart = () => {
                   </div>
 
                   <Button
-                    onClick={handleCheckout}
-                    disabled={isCheckingOut}
+                    onClick={() => setShowCheckout(true)}
                     className="w-full btn-gold"
                   >
-                    {isCheckingOut ? "Traitement..." : "Procéder au paiement"}
+                    Procéder au paiement
                   </Button>
                 </CardContent>
               </Card>

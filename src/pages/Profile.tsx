@@ -1,190 +1,101 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { User, LogOut, Settings, Package, Crown, Edit, Save, Calendar, Briefcase, MapPin, Phone, Mail } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-
-const WILAYAS = [
-  "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar",
-  "Blida", "Bouira", "Tamanrasset", "Tébessa", "Tlemcen", "Tiaret", "Tizi Ouzou", "Alger",
-  "Djelfa", "Jijel", "Sétif", "Saïda", "Skikda", "Sidi Bel Abbès", "Annaba", "Guelma",
-  "Constantine", "Médéa", "Mostaganem", "M'Sila", "Mascara", "Ouargla", "Oran", "El Bayadh",
-  "Illizi", "Bordj Bou Arreridj", "Boumerdès", "El Tarf", "Tindouf", "Tissemsilt", "El Oued",
-  "Khenchela", "Souk Ahras", "Tipaza", "Mila", "Aïn Defla", "Naâma", "Aïn Témouchent",
-  "Ghardaïa", "Relizane", "Timimoun", "Bordj Badji Mokhtar", "Ouled Djellal", "Béni Abbès",
-  "In Salah", "In Guezzam", "Touggourt", "Djanet", "El M'Ghair", "El Meniaa"
-];
+import { User, Mail, Phone, MapPin, Save } from 'lucide-react';
 
 interface Profile {
   id: string;
-  email: string | null;
-  full_name: string | null;
-  phone: string | null;
-  address: string | null;
-  city: string | null;
-  wilaya: string | null;
-  date_of_birth: string | null;
-  profession: string | null;
-  avatar_url: string | null;
-}
-
-interface TeamMember {
-  id: string;
-  promo_code: string;
-  rank: number;
-  total_sales: number;
-  total_commissions: number;
-  available_commissions: number;
+  email: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  city: string;
+  wilaya?: string;
 }
 
 const Profile = () => {
-  const { user, loading } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
-  const [promoStats, setPromoStats] = useState<{used: number, pending: number}>({used: 0, pending: 0});
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-      return;
-    }
     if (user) {
-      fetchProfile(user.id);
-      fetchTeamMember(user.id);
+      fetchProfile();
     }
-  }, [user, loading, navigate]);
+  }, [user]);
 
-  useEffect(() => {
-    if (teamMember) {
-      fetchPromoStats();
-    }
-  }, [teamMember]);
-
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, full_name, phone, address, city, wilaya, date_of_birth, profession, avatar_url')
-        .eq('id', userId)
+        .select('*')
+        .eq('id', user?.id)
         .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setProfile(data);
+      } else {
+        // Créer un profil si il n'existe pas
+        const newProfile = {
+          id: user?.id,
+          email: user?.email || '',
+          full_name: '',
+          phone: '',
+          address: '',
+          city: '',
+          wilaya: ''
+        };
+        setProfile(newProfile);
+      }
     } catch (error: any) {
       console.error('Error fetching profile:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le profil",
+        variant: "destructive",
+      });
     } finally {
-      setDataLoading(false);
+      setLoading(false);
     }
   };
 
-  const fetchTeamMember = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !user) return;
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setTeamMember(data);
-    } catch (error: any) {
-      console.error('Error fetching team member:', error);
-    }
-  };
-
-  const fetchPromoStats = async () => {
-    if (!teamMember) return;
-    
-    try {
-      const { count: used } = await supabase
-        .from('team_members')
-        .select('id', { count: 'exact', head: true })
-        .eq('invited_by', teamMember.id)
-        .eq('is_active', true);
-      
-      const { count: pending } = await supabase
-        .from('team_join_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('invited_by', teamMember.id)
-        .eq('status', 'pending');
-      
-      setPromoStats({ used: used || 0, pending: pending || 0 });
-    } catch (error) {
-      console.error('Error fetching promo stats:', error);
-    }
-  };
-
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
-
+    setSaving(true);
     try {
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-      toast({
-        title: "Profil mis à jour",
-        description: "Vos informations ont été sauvegardées.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const requestWithdrawal = async () => {
-    if (!teamMember || teamMember.available_commissions <= 0) return;
-
-    try {
-      const { error } = await supabase
-        .from('withdrawal_requests')
-        .insert({
-          team_member_id: teamMember.id,
-          amount: teamMember.available_commissions,
+        .upsert({
+          id: user.id,
+          email: profile.email,
+          full_name: profile.full_name,
+          phone: profile.phone,
+          address: profile.address,
+          city: profile.city,
+          wilaya: profile.wilaya
         });
 
       if (error) throw error;
 
       toast({
-        title: "Demande de retrait envoyée",
-        description: "Votre demande sera traitée par l'administration.",
+        title: "Profil mis à jour",
+        description: "Vos informations ont été sauvegardées",
       });
     } catch (error: any) {
       toast({
@@ -192,13 +103,28 @@ const Profile = () => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading || dataLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-gold">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Header />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Erreur de chargement</h1>
+          <p className="text-muted-foreground">Impossible de charger votre profil</p>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -207,274 +133,107 @@ const Profile = () => {
     <div className="min-h-screen bg-black">
       <Header />
       
-      <main className="container mx-auto px-4 py-10 sm:py-20">
-        <div className="max-w-6xl mx-auto" data-aos="fade-up">
-          {/* Profile Header - Mobile optimized */}
-          <div className="text-center mb-6 sm:mb-8">
-            <div className="flex flex-col items-center mb-6">
-              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 mb-4 border-2 border-gold">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="bg-gold/20 text-gold text-lg sm:text-xl">
-                  {profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold mb-2">
-                <span className="gold-text">{profile?.full_name || 'Utilisateur'}</span>
-              </h1>
-              <p className="text-muted-foreground text-sm sm:text-base">{profile?.email}</p>
-            </div>
-          </div>
-
-          <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6 sm:mb-8 bg-black/50">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-gold data-[state=active]:text-black text-xs sm:text-sm">
-                <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Profil</span>
-              </TabsTrigger>
-              <TabsTrigger value="team" className="data-[state=active]:bg-gold data-[state=active]:text-black text-xs sm:text-sm">
-                <Crown className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Team</span>
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="data-[state=active]:bg-gold data-[state=active]:text-black text-xs sm:text-sm">
-                <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Commandes</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="profile">
-              <Card className="glass-effect border-gold/20">
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <CardTitle className="flex items-center text-base sm:text-lg">
-                      <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-gold" />
-                      Informations personnelles
-                    </CardTitle>
-                    <Button
-                      variant="outline"
-                      onClick={() => setEditing(!editing)}
-                      className="border-gold/20 hover:border-gold text-sm"
-                    >
-                      {editing ? <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-2" /> : <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />}
-                      {editing ? 'Sauvegarder' : 'Modifier'}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName" className="flex items-center text-sm">
-                        <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Nom complet
-                      </Label>
-                      <Input
-                        id="fullName"
-                        value={profile?.full_name || ''}
-                        onChange={(e) => editing && updateProfile({ full_name: e.target.value })}
-                        disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center text-sm">
-                        <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Email
-                      </Label>
-                      <Input
-                        id="email"
-                        value={profile?.email || ''}
-                        disabled
-                        className="bg-black/50 border-gold/20 opacity-50 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="flex items-center text-sm">
-                        <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Téléphone
-                      </Label>
-                      <Input
-                        id="phone"
-                        value={profile?.phone || ''}
-                        onChange={(e) => editing && updateProfile({ phone: e.target.value })}
-                        disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="profession" className="flex items-center text-sm">
-                        <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Profession
-                      </Label>
-                      <Input
-                        id="profession"
-                        value={profile?.profession || ''}
-                        onChange={(e) => editing && updateProfile({ profession: e.target.value })}
-                        disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth" className="flex items-center text-sm">
-                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Date de naissance
-                      </Label>
-                      <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={profile?.date_of_birth || ''}
-                        onChange={(e) => editing && updateProfile({ date_of_birth: e.target.value })}
-                        disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="city" className="text-sm">Commune</Label>
-                      <Input
-                        id="city"
-                        value={profile?.city || ''}
-                        onChange={(e) => editing && updateProfile({ city: e.target.value })}
-                        disabled={!editing}
-                        className="bg-black/50 border-gold/20 focus:border-gold text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="wilaya" className="text-sm">Wilaya</Label>
-                      <Select 
-                        value={profile?.wilaya || ''} 
-                        onValueChange={(value) => editing && updateProfile({ wilaya: value })}
-                        disabled={!editing}
-                      >
-                        <SelectTrigger className="bg-black/50 border-gold/20 focus:border-gold text-sm">
-                          <SelectValue placeholder="Sélectionnez votre wilaya" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {WILAYAS.map((w) => (
-                            <SelectItem key={w} value={w}>{w}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
+      <main className="container mx-auto px-4 py-20">
+        <div className="max-w-2xl mx-auto">
+          <Card className="glass-effect border-gold/20">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <User className="h-6 w-6 text-gold" />
+                <CardTitle className="text-2xl text-white">Mon Profil</CardTitle>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              <form onSubmit={handleSave} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="flex items-center text-sm">
-                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      Adresse complète
+                    <Label htmlFor="full_name" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Nom complet
                     </Label>
-                    <Textarea
-                      id="address"
-                      value={profile?.address || ''}
-                      onChange={(e) => editing && updateProfile({ address: e.target.value })}
-                      disabled={!editing}
-                      className="bg-black/50 border-gold/20 focus:border-gold min-h-[80px] text-sm resize-none"
+                    <Input
+                      id="full_name"
+                      value={profile.full_name}
+                      onChange={(e) => setProfile({...profile, full_name: e.target.value})}
+                      className="bg-black/50 border-gold/20"
                     />
                   </div>
-
-                  <div className="pt-4 border-t border-gold/20">
-                    <Button onClick={handleSignOut} variant="destructive" className="text-sm">
-                      <LogOut className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      Se déconnecter
-                    </Button>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile.email}
+                      onChange={(e) => setProfile({...profile, email: e.target.value})}
+                      className="bg-black/50 border-gold/20"
+                      disabled
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="team">
-              {teamMember ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  <Card className="glass-effect border-gold/20">
-                    <CardHeader>
-                      <CardTitle className="text-gold text-base sm:text-lg">Mes Statistiques</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 sm:space-y-4">
-                      <div className="flex justify-between text-sm sm:text-base">
-                        <span>Code Promo:</span>
-                        <span className="font-bold text-gold">{teamMember.promo_code}</span>
-                      </div>
-                      <div className="flex justify-between text-sm sm:text-base">
-                        <span>Rang:</span>
-                        <span className="font-bold">{teamMember.rank}</span>
-                      </div>
-                      <div className="flex justify-between text-sm sm:text-base">
-                        <span>Ventes totales:</span>
-                        <span className="font-bold">{teamMember.total_sales}</span>
-                      </div>
-                      <div className="flex justify-between text-sm sm:text-base">
-                        <span>Commissions totales:</span>
-                        <span className="font-bold text-gold">{teamMember.total_commissions} DA</span>
-                      </div>
-                      <div className="flex justify-between text-sm sm:text-base">
-                        <span>Commissions disponibles:</span>
-                        <span className="font-bold text-green-500">{teamMember.available_commissions} DA</span>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm sm:text-base">
-                          <span>Personnes avec mon code :</span>
-                          <span className="font-bold text-gold">{promoStats.used}</span>
-                        </div>
-                        <div className="flex justify-between text-sm sm:text-base">
-                          <span>En attente :</span>
-                          <span className="font-bold text-yellow-500">{promoStats.pending}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="glass-effect border-gold/20">
-                    <CardHeader>
-                      <CardTitle className="text-gold text-base sm:text-lg">Actions</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 sm:space-y-4">
-                      <Button 
-                        onClick={requestWithdrawal}
-                        disabled={teamMember.available_commissions <= 0}
-                        className="w-full btn-gold text-sm sm:text-base"
-                      >
-                        Demander un retrait
-                      </Button>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
-                        Les retraits sont traités manuellement par l'administration.
-                      </p>
-                    </CardContent>
-                  </Card>
                 </div>
-              ) : (
-                <Card className="glass-effect border-gold/20 text-center p-6 sm:p-8">
-                  <CardContent>
-                    <Crown className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-gold" />
-                    <h3 className="text-lg sm:text-xl font-semibold mb-2">Rejoignez la Team Tasedda</h3>
-                    <p className="text-muted-foreground mb-4 text-sm sm:text-base">
-                      Vous n'êtes pas encore membre de notre équipe d'ambassadeurs.
-                    </p>
-                    <Button onClick={() => navigate('/team')} className="btn-gold text-sm sm:text-base">
-                      Rejoindre maintenant
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
 
-            <TabsContent value="orders">
-              <Card className="glass-effect border-gold/20">
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg">Mes Commandes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-center py-6 sm:py-8 text-sm sm:text-base">
-                    Aucune commande pour le moment.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Téléphone
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={profile.phone}
+                    onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                    className="bg-black/50 border-gold/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Adresse
+                  </Label>
+                  <Input
+                    id="address"
+                    value={profile.address}
+                    onChange={(e) => setProfile({...profile, address: e.target.value})}
+                    className="bg-black/50 border-gold/20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">Ville</Label>
+                    <Input
+                      id="city"
+                      value={profile.city}
+                      onChange={(e) => setProfile({...profile, city: e.target.value})}
+                      className="bg-black/50 border-gold/20"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="wilaya">Wilaya</Label>
+                    <Input
+                      id="wilaya"
+                      value={profile.wilaya || ''}
+                      onChange={(e) => setProfile({...profile, wilaya: e.target.value})}
+                      className="bg-black/50 border-gold/20"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full btn-gold"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </main>
 

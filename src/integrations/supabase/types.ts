@@ -127,6 +127,60 @@ export type Database = {
         }
         Relationships: []
       }
+      invitation_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_used: boolean | null
+          type: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_used?: boolean | null
+          type: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_used?: boolean | null
+          type?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          sender_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          sender_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           color: string | null
@@ -357,6 +411,7 @@ export type Database = {
           phone: string | null
           role: string | null
           updated_at: string | null
+          wilaya: string | null
         }
         Insert: {
           address?: string | null
@@ -369,6 +424,7 @@ export type Database = {
           phone?: string | null
           role?: string | null
           updated_at?: string | null
+          wilaya?: string | null
         }
         Update: {
           address?: string | null
@@ -381,6 +437,7 @@ export type Database = {
           phone?: string | null
           role?: string | null
           updated_at?: string | null
+          wilaya?: string | null
         }
         Relationships: []
       }
@@ -392,6 +449,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           monthly_fee: number | null
+          seller_type: string | null
           slug: string
           status: string | null
           subscription_expires_at: string | null
@@ -406,6 +464,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           monthly_fee?: number | null
+          seller_type?: string | null
           slug: string
           status?: string | null
           subscription_expires_at?: string | null
@@ -420,6 +479,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           monthly_fee?: number | null
+          seller_type?: string | null
           slug?: string
           status?: string | null
           subscription_expires_at?: string | null
