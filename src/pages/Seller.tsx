@@ -1,27 +1,27 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
+import InvitationCodeModal from '@/components/InvitationCodeModal';
+import ContactButton from '@/components/ContactButton';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Store, Shield, Users, TrendingUp, CheckCircle, Package } from 'lucide-react';
+import { Store, Package, TrendingUp, Users, CheckCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const Seller = () => {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
-  const [businessName, setBusinessName] = useState('');
-  const [description, setDescription] = useState('');
-  const [sellerType, setSellerType] = useState<'normal' | 'wholesale'>('normal');
   const [dataLoading, setDataLoading] = useState(true);
   const [isSeller, setIsSeller] = useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
+  const [selectedType, setSelectedType] = useState<'normal' | 'wholesale'>('normal');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -37,14 +37,16 @@ const Seller = () => {
 
   const checkSellerStatus = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Vérifier si déjà vendeur
+      const { data: seller, error: sellerError } = await supabase
         .from('sellers')
         .select('id')
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setIsSeller(!!data);
+      if (sellerError && sellerError.code !== 'PGRST116') throw sellerError;
+      
+      setIsSeller(!!seller);
     } catch (error: any) {
       console.error('Error checking seller status:', error);
     } finally {
@@ -52,230 +54,276 @@ const Seller = () => {
     }
   };
 
-  const createSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
+  const handleInvitationSuccess = () => {
+    setShowInvitationModal(false);
+    becomeSeller();
   };
 
-  const createSeller = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const becomeSeller = async () => {
     if (!user) return;
-
+    
+    setDataLoading(true);
     try {
-      const slug = createSlug(businessName);
-
-      // Vérifier si le slug existe déjà
-      const { data: existingSeller, error: checkError } = await supabase
-        .from('sellers')
+      // Vérifier si l'utilisateur est membre de la team
+      const { data: teamMember } = await supabase
+        .from('team_members')
         .select('id')
-        .eq('slug', slug)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
         .single();
-
-      if (existingSeller) {
+        
+      if (teamMember) {
         toast({
-          title: t('seller.form.slugExists'),
-          description: t('seller.form.chooseAnother'),
+          title: "Impossible de devenir vendeur",
+          description: "Vous êtes membre de la Team. Un membre de la Team ne peut pas avoir de boutique.",
           variant: "destructive",
         });
+        setDataLoading(false);
         return;
       }
 
-      const { error } = await supabase
+      // Récupérer les informations du profil
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const businessName = profile?.full_name || 'Ma Boutique';
+      
+      // Créer le seller avec génération automatique du slug
+      const { data: newSeller, error } = await supabase
         .from('sellers')
         .insert({
           user_id: user.id,
           business_name: businessName,
-          slug: slug,
-          description: description,
-          seller_type: sellerType,
+          seller_type: selectedType,
           status: 'pending',
-        });
+          description: `Boutique ${selectedType === 'wholesale' ? 'de gros' : 'locale'} de ${businessName}`,
+          slug: '' // Sera généré automatiquement par la fonction SQL
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
       toast({
-        title: t('seller.form.requestSent'),
-        description: t('seller.form.requestDescription'),
+        title: "Demande envoyée !",
+        description: "Votre demande pour devenir vendeur a été envoyée et sera examinée par l'administration.",
       });
 
-      setIsSeller(false);
-      navigate('/profile');
+      setHasPendingRequest(true);
     } catch (error: any) {
       toast({
-        title: t('common.error'),
+        title: "Erreur",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setDataLoading(false);
     }
   };
 
-  const features = [
-    {
-      icon: Shield,
-      title: t('seller.features.trial'),
-      description: t('seller.features.trialDesc')
-    },
-    {
-      icon: Users,
-      title: t('seller.features.support'),
-      description: t('seller.features.supportDesc')
-    },
-    {
-      icon: TrendingUp,
-      title: t('seller.features.pricing'),
-      description: t('seller.features.pricingDesc')
-    }
-  ];
-
   if (loading || dataLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-gold">{t('common.loading')}</div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
       </div>
     );
   }
 
   if (isSeller) {
-    const [shop, setShop] = useState<any>(null);
-    useEffect(() => {
-      if (user) {
-        supabase.from('sellers').select('*').eq('user_id', user.id).single().then(({ data }) => setShop(data));
-      }
-    }, [user]);
-    
-    if (shop && shop.status === 'pending') {
-      return (
-        <div className="min-h-screen bg-black flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gold mb-4">{t('seller.pending.title')}</h2>
-            <p className="text-muted-foreground">{t('seller.pending.description')}</p>
-          </div>
-        </div>
-      );
-    }
-    if (shop && shop.status === 'active') {
-      return (
-        <div className="min-h-screen bg-black">
-          <Header />
-          <main className="container mx-auto px-4 py-20">
-            <div className="text-center" data-aos="fade-up">
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+        <Header />
+        
+        <main className="container mx-auto px-4 py-20">
+          <div className="text-center" data-aos="fade-up">
+            <div className="relative">
               <CheckCircle className="h-20 w-20 mx-auto mb-6 text-gold" />
-              <h1 className="text-3xl font-display font-bold mb-4">
-                {t('seller.active.title')} <span className="gold-text">{t('seller.active.shop')}</span> {t('seller.active.isActive')}
-              </h1>
-              <p className="text-muted-foreground mb-8">
-                {t('seller.active.description')}
-              </p>
-              <Button onClick={() => navigate('/profile')} className="btn-gold">
-                {t('seller.active.manage')}
-              </Button>
+              <Sparkles className="h-8 w-8 absolute top-0 right-1/2 transform translate-x-8 text-gold animate-pulse" />
             </div>
-          </main>
-          <Footer />
-        </div>
-      );
-    }
+            <h1 className="text-4xl font-display font-bold mb-4">
+              Bienvenue dans votre <span className="gold-text">Boutique</span> !
+            </h1>
+            <p className="text-muted-foreground mb-8 text-lg">
+              Votre boutique est maintenant créée. <br />
+              Accédez à votre espace vendeur pour gérer vos produits et commandes.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button onClick={() => navigate('/seller-space')} className="btn-gold text-lg py-3 px-8">
+                <Store className="h-5 w-5 mr-2" />
+                Accéder à ma boutique
+              </Button>
+              <ContactButton className="text-lg py-3 px-8" />
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       <Header />
       
       <main className="py-20">
         {/* Hero Section */}
         <section className="container mx-auto px-4 text-center mb-20" data-aos="fade-up">
-          <Store className="h-20 w-20 mx-auto mb-6 text-gold" />
-          <h1 className="text-4xl lg:text-5xl font-display font-bold mb-6">
-            {t('seller.hero.title')} <span className="gold-text">{t('seller.hero.shop')}</span> {t('seller.hero.online')}
+          <div className="relative">
+            <Store className="h-24 w-24 mx-auto mb-6 text-gold" />
+            <Sparkles className="h-8 w-8 absolute top-0 left-1/2 transform -translate-x-16 text-gold animate-pulse" />
+            <Sparkles className="h-6 w-6 absolute top-8 right-1/2 transform translate-x-16 text-gold animate-pulse delay-300" />
+          </div>
+          <h1 className="text-4xl lg:text-6xl font-display font-bold mb-6">
+            Créez votre <span className="gold-text">Boutique</span> en ligne
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            {t('seller.hero.description')}
+            Rejoignez notre plateforme et vendez vos produits en ligne. Bénéficiez d'un mois d'essai gratuit puis seulement 700 DA/mois.
           </p>
-          <div className="gold-gradient rounded-lg p-1 inline-block">
-            <div className="bg-black rounded-lg px-8 py-4">
-              <span className="text-2xl font-bold gold-text">
-                {t('seller.hero.pricing')}
+          <div className="gold-gradient rounded-2xl p-1 inline-block mb-8">
+            <div className="bg-black rounded-2xl px-8 py-6">
+              <span className="text-2xl lg:text-3xl font-bold gold-text">
+                1 Mois Gratuit + 700 DA/mois seulement
               </span>
             </div>
           </div>
         </section>
 
-        {/* Avantages */}
+        {/* Features */}
         <section className="container mx-auto px-4 mb-20">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <Card key={index} className="glass-effect border-gold/20 card-hover" data-aos="fade-up" data-aos-delay={index * 100}>
-                <CardHeader className="text-center">
-                  <feature.icon className="h-16 w-16 mx-auto mb-4 text-gold" />
-                  <CardTitle>{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
+            <Card className="glass-effect border-gold/20 card-hover group" data-aos="fade-up" data-aos-delay="100">
+              <CardHeader className="text-center">
+                <div className="relative">
+                  <Package className="h-16 w-16 mx-auto mb-4 text-gold group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-gold/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <CardTitle className="text-xl">Essai Gratuit</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-muted-foreground mb-4">
+                  Testez notre plateforme gratuitement pendant 1 mois complet
+                </p>
+                <div className="text-3xl font-bold text-green-500">1 Mois</div>
+                <p className="text-sm text-muted-foreground">100% gratuit</p>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-effect border-gold/20 card-hover group" data-aos="fade-up" data-aos-delay="200">
+              <CardHeader className="text-center">
+                <div className="relative">
+                  <Users className="h-16 w-16 mx-auto mb-4 text-gold group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-gold/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <CardTitle className="text-xl">Support Complet</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-muted-foreground mb-4">
+                  Support client 24/7 et formation complète
+                </p>
+                <div className="text-3xl font-bold gold-text">24/7</div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-effect border-gold/20 card-hover group" data-aos="fade-up" data-aos-delay="300">
+              <CardHeader className="text-center">
+                <div className="relative">
+                  <TrendingUp className="h-16 w-16 mx-auto mb-4 text-gold group-hover:scale-110 transition-transform" />
+                  <div className="absolute inset-0 bg-gold/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <CardTitle className="text-xl">Prix Accessible</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-muted-foreground mb-4">
+                  Tarif mensuel très compétitif
+                </p>
+                <div className="text-3xl font-bold gold-text">700 DA</div>
+                <p className="text-sm text-muted-foreground">par mois seulement</p>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
-        {/* Types de vendeurs */}
+        {/* Seller Types */}
         <section className="container mx-auto px-4 mb-20" data-aos="fade-up">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-display font-bold mb-4">
-              {t('seller.types.title')} <span className="gold-text">{t('seller.types.choose')}</span>
+            <h2 className="text-4xl font-display font-bold mb-4">
+              Choisissez votre <span className="gold-text">Type de Boutique</span>
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              {t('seller.types.description')}
+            <p className="text-muted-foreground text-lg">
+              Sélectionnez le type de boutique qui correspond le mieux à votre activité
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="glass-effect border-gold/20">
+            <Card 
+              className={`glass-effect border-gold/20 card-hover cursor-pointer transition-all ${
+                selectedType === 'normal' ? 'border-gold ring-2 ring-gold/20' : ''
+              }`}
+              onClick={() => setSelectedType('normal')}
+            >
               <CardHeader className="text-center">
                 <Store className="h-16 w-16 mx-auto mb-4 text-gold" />
-                <CardTitle>{t('seller.types.normal.title')}</CardTitle>
+                <CardTitle className="text-2xl">Vendeur Local</CardTitle>
+                {selectedType === 'normal' && (
+                  <Badge className="bg-gold text-black">Sélectionné</Badge>
+                )}
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground text-center">{t('seller.types.normal.description')}</p>
+              <CardContent>
+                <p className="text-muted-foreground mb-4 text-center">
+                  Parfait pour les petites boutiques et vendeurs individuels
+                </p>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{t('seller.types.normal.feature1')}</span>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Boutique en ligne personnalisée
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{t('seller.types.normal.feature2')}</span>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Gestion des commandes
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{t('seller.types.normal.feature3')}</span>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Support client dédié
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
-            <Card className="glass-effect border-gold/20">
+            <Card 
+              className={`glass-effect border-gold/20 card-hover cursor-pointer transition-all ${
+                selectedType === 'wholesale' ? 'border-gold ring-2 ring-gold/20' : ''
+              }`}
+              onClick={() => setSelectedType('wholesale')}
+            >
               <CardHeader className="text-center">
                 <Package className="h-16 w-16 mx-auto mb-4 text-gold" />
-                <CardTitle>{t('seller.types.wholesale.title')}</CardTitle>
+                <CardTitle className="text-2xl">Grossiste</CardTitle>
+                {selectedType === 'wholesale' && (
+                  <Badge className="bg-gold text-black">Sélectionné</Badge>
+                )}
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-muted-foreground text-center">{t('seller.types.wholesale.description')}</p>
+              <CardContent>
+                <p className="text-muted-foreground mb-4 text-center">
+                  Idéal pour la vente en gros et les grands volumes
+                </p>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{t('seller.types.wholesale.feature1')}</span>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Tarifs préférentiels en gros
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{t('seller.types.wholesale.feature2')}</span>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Gestion des stocks avancée
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{t('seller.types.wholesale.feature3')}</span>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    Outils de vente B2B
                   </li>
                 </ul>
               </CardContent>
@@ -283,83 +331,40 @@ const Seller = () => {
           </div>
         </section>
 
-        {/* Formulaire */}
+        {/* Call to Action */}
         <section className="container mx-auto px-4">
-          <div className="max-w-md mx-auto" data-aos="fade-up">
-            <Card className="glass-effect border-gold/20">
+          <div className="text-center" data-aos="fade-up">
+            <Card className="glass-effect border-gold/20 max-w-lg mx-auto">
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl gold-text">
-                  {t('seller.form.title')}
+                <CardTitle className="text-3xl gold-text mb-2">
+                  Créer ma boutique
                 </CardTitle>
-                <p className="text-muted-foreground">
-                  {t('seller.form.description')}
+                <p className="text-muted-foreground text-lg">
+                  Commencez avec un code d'invitation
                 </p>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={createSeller} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="sellerType">{t('seller.form.type')} *</Label>
-                    <RadioGroup value={sellerType} onValueChange={(value: 'normal' | 'wholesale') => setSellerType(value)}>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="normal" id="normal" />
-                        <Label htmlFor="normal">{t('seller.types.normal.title')}</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="wholesale" id="wholesale" />
-                        <Label htmlFor="wholesale">{t('seller.types.wholesale.title')}</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="businessName">{t('seller.form.businessName')} *</Label>
-                    <Input
-                      id="businessName"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder={t('seller.form.businessPlaceholder')}
-                      required
-                      className="bg-black/50 border-gold/20 focus:border-gold"
-                    />
-                    {businessName && (
-                      <p className="text-xs text-muted-foreground">
-                        URL: tasedda.dz/boutique/{createSlug(businessName)}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">{t('seller.form.description')}</Label>
-                    <Textarea
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder={t('seller.form.descriptionPlaceholder')}
-                      className="bg-black/50 border-gold/20 focus:border-gold"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="bg-gold/10 border border-gold/20 rounded-lg p-4">
-                    <h4 className="font-semibold text-gold mb-2">{t('seller.form.conditions')}</h4>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• {t('seller.form.condition1')}</li>
-                      <li>• {t('seller.form.condition2')}</li>
-                      <li>• {t('seller.form.condition3')}</li>
-                      <li>• {t('seller.form.condition4')}</li>
-                    </ul>
-                  </div>
-                  
-                  <Button type="submit" className="w-full btn-gold" disabled={loading}>
-                    <Store className="h-4 w-4 mr-2" />
-                    {loading ? t('seller.form.creating') : t('seller.form.create')}
-                  </Button>
-                </form>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={() => setShowInvitationModal(true)}
+                  className="w-full btn-gold text-lg py-3" 
+                  disabled={dataLoading}
+                >
+                  <Store className="h-5 w-5 mr-2" />
+                  {dataLoading ? "Chargement..." : "Créer ma boutique"}
+                </Button>
+                <ContactButton className="w-full text-lg py-3" />
               </CardContent>
             </Card>
           </div>
         </section>
       </main>
+
+      <InvitationCodeModal
+        isOpen={showInvitationModal}
+        onClose={() => setShowInvitationModal(false)}
+        type="seller"
+        onSuccess={handleInvitationSuccess}
+      />
 
       <Footer />
     </div>

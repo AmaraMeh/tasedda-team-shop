@@ -46,7 +46,7 @@ const ProductDetail = () => {
       <div className="min-h-screen bg-black">
         <Header />
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gold">Chargement...</div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
         </div>
         <Footer />
       </div>
@@ -83,13 +83,26 @@ const ProductDetail = () => {
       return;
     }
 
+    // Fix the product structure to match the Product type
     const cartProduct = {
-      ...product,
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image_url || '/placeholder.svg',
       image_url: product.image_url || '/placeholder.svg',
       category: product.categories?.name || 'Sans catégorie',
       inStock: product.stock_quantity > 0,
       description: product.description || '',
-      is_featured: product.is_featured || false
+      is_featured: product.is_featured || false,
+      original_price: product.original_price,
+      stock_quantity: product.stock_quantity,
+      colors: product.colors,
+      sizes: product.sizes,
+      category_id: product.category_id,
+      seller_id: product.seller_id,
+      is_active: product.is_active,
+      created_at: product.created_at,
+      updated_at: product.updated_at
     };
 
     addToCart(cartProduct, quantity, selectedSize, selectedColor);
@@ -116,41 +129,43 @@ const ProductDetail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       <Header />
       
-      <div className="container mx-auto px-4 py-20">
+      <div className="container mx-auto px-4 py-8 lg:py-16">
         <Button
           variant="outline"
           onClick={() => navigate(-1)}
-          className="mb-6 border-gold/20 text-white hover:bg-gold/10"
+          className="mb-6 border-gold/20 text-white hover:bg-gold/10 backdrop-blur-sm"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Retour
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
-              <img
-                src={images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <Card className="glass-effect border-gold/20 overflow-hidden">
+              <div className="aspect-square bg-black/50 rounded-lg overflow-hidden">
+                <img
+                  src={images[selectedImage] || '/placeholder.svg'}
+                  alt={product.name}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+            </Card>
             {images.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
                 {images.map((image, index) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`aspect-square bg-muted rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index ? 'border-gold' : 'border-transparent'
+                    className={`aspect-square bg-black/50 rounded-lg overflow-hidden border-2 transition-all duration-200 hover:scale-105 ${
+                      selectedImage === index ? 'border-gold shadow-lg shadow-gold/20' : 'border-gold/20'
                     }`}
                   >
                     <img
-                      src={image}
+                      src={image || '/placeholder.svg'}
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -162,27 +177,32 @@ const ProductDetail = () => {
 
           {/* Product Info */}
           <div className="space-y-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="text-gold border-gold/20">
+            <Card className="glass-effect border-gold/20 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Badge variant="outline" className="text-gold border-gold/20 bg-gold/10">
                   {product.categories?.name || 'Sans catégorie'}
                 </Badge>
                 {discount > 0 && (
-                  <Badge variant="destructive">
+                  <Badge variant="destructive" className="bg-red-500/20 text-red-400 border-red-500/20">
                     -{discount}%
                   </Badge>
                 )}
                 {product.stock_quantity <= 0 && (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="bg-gray-500/20 text-gray-400">
                     Rupture de stock
+                  </Badge>
+                )}
+                {product.is_featured && (
+                  <Badge className="bg-gold text-black">
+                    Vedette
                   </Badge>
                 )}
               </div>
               
-              <h1 className="text-3xl font-bold text-white mb-4">{product.name}</h1>
+              <h1 className="text-3xl lg:text-4xl font-bold text-white mb-4">{product.name}</h1>
               
-              <div className="flex items-center gap-4 mb-4">
-                <span className="text-3xl font-bold text-gold">
+              <div className="flex items-center gap-4 mb-6">
+                <span className="text-3xl lg:text-4xl font-bold text-gold">
                   {product.price.toLocaleString()} DA
                 </span>
                 {product.original_price && (
@@ -193,13 +213,13 @@ const ProductDetail = () => {
               </div>
 
               {product.description && (
-                <p className="text-muted-foreground mb-6">{product.description}</p>
+                <p className="text-muted-foreground mb-6 leading-relaxed">{product.description}</p>
               )}
-            </div>
+            </Card>
 
             {/* Size Selection */}
             {product.sizes && product.sizes.length > 0 && (
-              <div>
+              <Card className="glass-effect border-gold/20 p-6">
                 <h3 className="text-lg font-semibold text-white mb-3">Taille</h3>
                 <div className="flex flex-wrap gap-2">
                   {product.sizes.map((size) => (
@@ -213,12 +233,12 @@ const ProductDetail = () => {
                     </Button>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Color Selection */}
             {product.colors && product.colors.length > 0 && (
-              <div>
+              <Card className="glass-effect border-gold/20 p-6">
                 <h3 className="text-lg font-semibold text-white mb-3">Couleur</h3>
                 <div className="flex flex-wrap gap-2">
                   {product.colors.map((color) => (
@@ -232,82 +252,82 @@ const ProductDetail = () => {
                     </Button>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
 
-            {/* Quantity */}
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Quantité</h3>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="border-gold/20 text-white hover:bg-gold/10"
-                >
-                  -
-                </Button>
-                <span className="text-white w-8 text-center">{quantity}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="border-gold/20 text-white hover:bg-gold/10"
-                >
-                  +
-                </Button>
+            {/* Quantity & Actions */}
+            <Card className="glass-effect border-gold/20 p-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Quantité</h3>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="border-gold/20 text-white hover:bg-gold/10"
+                  >
+                    -
+                  </Button>
+                  <span className="text-white w-12 text-center font-semibold text-lg">{quantity}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="border-gold/20 text-white hover:bg-gold/10"
+                  >
+                    +
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="space-y-4">
-              <Button
-                onClick={handleAddToCart}
-                disabled={product.stock_quantity <= 0}
-                className="w-full btn-gold"
-                size="lg"
-              >
-                <ShoppingBag className="h-5 w-5 mr-2" />
-                {product.stock_quantity <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
-              </Button>
-              
-              <div className="flex gap-2">
+              {/* Actions */}
+              <div className="space-y-4">
                 <Button
-                  variant="outline"
-                  onClick={() => setIsLiked(!isLiked)}
-                  className="flex-1 border-gold/20 text-white hover:bg-gold/10"
+                  onClick={handleAddToCart}
+                  disabled={product.stock_quantity <= 0}
+                  className="w-full btn-gold text-lg py-3"
+                  size="lg"
                 >
-                  <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-gold text-gold' : ''}`} />
-                  {isLiked ? 'Aimé' : 'Aimer'}
+                  <ShoppingBag className="h-5 w-5 mr-2" />
+                  {product.stock_quantity <= 0 ? 'Rupture de stock' : 'Ajouter au panier'}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleShare}
-                  className="flex-1 border-gold/20 text-white hover:bg-gold/10"
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Partager
-                </Button>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsLiked(!isLiked)}
+                    className="border-gold/20 text-white hover:bg-gold/10"
+                  >
+                    <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-gold text-gold' : ''}`} />
+                    {isLiked ? 'Aimé' : 'Aimer'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleShare}
+                    className="border-gold/20 text-white hover:bg-gold/10"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Partager
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Stock Info */}
-            {product.stock_quantity > 0 && (
-              <div className="text-sm text-muted-foreground">
-                {product.stock_quantity} article(s) en stock
-              </div>
-            )}
+              {/* Stock Info */}
+              {product.stock_quantity > 0 && (
+                <div className="text-sm text-muted-foreground mt-4">
+                  {product.stock_quantity} article(s) en stock
+                </div>
+              )}
+            </Card>
 
             {/* Seller Info */}
             {product.sellers && (
-              <Card className="glass-effect border-gold/20">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-white mb-2">Vendu par</h3>
-                  <p className="text-gold">{product.sellers.business_name}</p>
-                  <Badge variant="outline" className="mt-2">
-                    {product.sellers.seller_type === 'wholesale' ? 'Grossiste' : 'Vendeur local'}
-                  </Badge>
-                </CardContent>
+              <Card className="glass-effect border-gold/20 p-6">
+                <h3 className="font-semibold text-white mb-3">Vendu par</h3>
+                <p className="text-gold text-lg font-medium">{product.sellers.business_name}</p>
+                <Badge variant="outline" className="mt-2 border-gold/20">
+                  {product.sellers.seller_type === 'wholesale' ? 'Grossiste' : 'Vendeur local'}
+                </Badge>
               </Card>
             )}
           </div>
