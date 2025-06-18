@@ -7,7 +7,7 @@ import Footer from '@/components/Layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Phone, Mail, MessageCircle } from 'lucide-react';
+import { Package, Phone, Mail, MessageCircle, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Seller {
@@ -71,8 +71,15 @@ const Wholesalers = () => {
   };
 
   const handleWhatsAppContact = (phone: string, businessName: string) => {
-    const message = `Bonjour, je suis intéressé par vos produits en gros de ${businessName}. Pouvez-vous me donner plus d'informations ?`;
+    const message = `Bonjour, je suis intéressé par vos produits en gros de ${businessName}. Pouvez-vous me donner plus d'informations sur vos tarifs et conditions de vente ?`;
     const whatsappUrl = `https://wa.me/213${phone.substring(1)}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleChatContact = (sellerId: string, businessName: string) => {
+    // For now, redirect to WhatsApp. Later, implement internal chat system
+    const message = `Bonjour, je souhaite discuter de vos produits en gros via votre boutique ${businessName}.`;
+    const whatsappUrl = `https://wa.me/213?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -96,11 +103,20 @@ const Wholesalers = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Découvrez nos grossistes partenaires pour vos achats en grande quantité
           </p>
+          <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg max-w-4xl mx-auto">
+            <h3 className="text-lg font-semibold text-blue-400 mb-2">
+              Tarifs de livraison disponibles
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Consultez nos tarifs de livraison compétitifs pour toutes les wilayas d'Algérie. 
+              Livraison à domicile et points de retrait disponibles.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {wholesalers.map((wholesaler) => (
-            <Card key={wholesaler.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all">
+            <Card key={wholesaler.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all group">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -114,6 +130,10 @@ const Wholesalers = () => {
                   <p className="text-muted-foreground">{wholesaler.description}</p>
                   
                   <div className="space-y-2 text-sm">
+                    <div className="flex items-center text-muted-foreground">
+                      <Users className="h-4 w-4 mr-2" />
+                      {wholesaler.profiles.full_name}
+                    </div>
                     <div className="flex items-center text-muted-foreground">
                       <Phone className="h-4 w-4 mr-2" />
                       {wholesaler.profiles.phone}
@@ -130,14 +150,26 @@ const Wholesalers = () => {
                         Voir les produits
                       </Link>
                     </Button>
-                    <Button 
-                      onClick={() => handleWhatsAppContact(wholesaler.profiles.phone, wholesaler.business_name)}
-                      variant="outline"
-                      className="w-full border-green-500 text-green-400 hover:bg-green-500/10"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Contacter via WhatsApp
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        onClick={() => handleWhatsAppContact(wholesaler.profiles.phone, wholesaler.business_name)}
+                        variant="outline"
+                        size="sm"
+                        className="border-green-500 text-green-400 hover:bg-green-500/10"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </Button>
+                      <Button 
+                        onClick={() => handleChatContact(wholesaler.id, wholesaler.business_name)}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Chat
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -147,9 +179,37 @@ const Wholesalers = () => {
 
         {wholesalers.length === 0 && (
           <div className="text-center py-12">
+            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Aucun grossiste disponible pour le moment.</p>
           </div>
         )}
+
+        {/* Shipping Information */}
+        <section className="mt-16 p-6 glass-effect border-gold/20 rounded-lg">
+          <h2 className="text-2xl font-bold text-center mb-6 gold-text">
+            Informations de Livraison
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-3 text-white">Tarifs Standards</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Livraison à domicile: 400-1600 DA selon la wilaya</li>
+                <li>• Point de retrait (Stop Desk): 200-1050 DA</li>
+                <li>• Livraison express disponible dans certaines wilayas</li>
+                <li>• Retour possible avec frais de 200 DA</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-3 text-white">Conditions Spéciales Grossistes</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Tarifs dégressifs selon la quantité</li>
+                <li>• Livraison gratuite à partir d'un certain montant</li>
+                <li>• Négociation possible pour les gros volumes</li>
+                <li>• Conditions de paiement flexibles</li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

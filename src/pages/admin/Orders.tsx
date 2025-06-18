@@ -33,7 +33,7 @@ const Orders = () => {
   const [selected, setSelected] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [orderItems, setOrderItems] = useState<any[]>([]);
-  const [editStatus, setEditStatus] = useState({ payment_status: '', delivery_status: '' });
+  const [editStatus, setEditStatus] = useState({ payment_status: '', order_status: '' });
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
@@ -63,8 +63,8 @@ const Orders = () => {
       
       // Calculer les statistiques
       const total = data?.length || 0;
-      const pending = data?.filter(o => o.delivery_status === 'pending').length || 0;
-      const delivered = data?.filter(o => o.delivery_status === 'delivered').length || 0;
+      const pending = data?.filter(o => o.order_status === 'pending').length || 0;
+      const delivered = data?.filter(o => o.order_status === 'delivered').length || 0;
       const totalRevenue = data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
       
       setStats({ total, pending, delivered, totalRevenue });
@@ -85,7 +85,7 @@ const Orders = () => {
       fetchOrderItems(selected.id);
       setEditStatus({
         payment_status: selected.payment_status || 'pending',
-        delivery_status: selected.delivery_status || 'pending',
+        order_status: selected.order_status || 'pending',
       });
     } else {
       setOrderItems([]);
@@ -117,7 +117,7 @@ const Orders = () => {
       'Téléphone': order.profiles?.phone || 'N/A',
       'Montant total': order.total_amount,
       'Statut paiement': paymentStatusOptions.find(p => p.value === order.payment_status)?.label || order.payment_status,
-      'Statut livraison': deliveryStatusOptions.find(d => d.value === order.delivery_status)?.label || order.delivery_status,
+      'Statut commande': deliveryStatusOptions.find(d => d.value === order.order_status)?.label || order.order_status,
       'Date de création': new Date(order.created_at).toLocaleDateString('fr-FR'),
       'Méthode de paiement': order.payment_method || 'Paiement à la livraison'
     }));
@@ -140,7 +140,7 @@ const Orders = () => {
         (order.profiles?.full_name || '').toLowerCase().includes(filter.toLowerCase()) ||
         (order.profiles?.email || '').toLowerCase().includes(filter.toLowerCase());
       
-      const matchesStatus = statusFilter === 'all' || order.delivery_status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || order.order_status === statusFilter;
       
       const matchesDate = dateFilter === 'all' || (() => {
         const orderDate = new Date(order.created_at);
@@ -198,7 +198,7 @@ const Orders = () => {
         .from('orders')
         .update({ 
           payment_status: editStatus.payment_status,
-          delivery_status: editStatus.delivery_status,
+          order_status: editStatus.order_status,
           updated_at: new Date().toISOString()
         })
         .eq('id', selected.id);
@@ -343,7 +343,7 @@ const Orders = () => {
             
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="bg-black/50 border-gold/20">
-                <SelectValue placeholder="Statut livraison" />
+                <SelectValue placeholder="Statut commande" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les statuts</SelectItem>
@@ -391,7 +391,7 @@ const Orders = () => {
                   <div className="flex-1">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <span>#{order.order_number}</span>
-                      {getStatusIcon(order.delivery_status)}
+                      {getStatusIcon(order.order_status)}
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-2 text-sm">
                       <span className="text-muted-foreground">
@@ -416,7 +416,7 @@ const Orders = () => {
                     </div>
                     <div className="flex gap-2 mt-2">
                       {getStatusBadge(order.payment_status, 'payment')}
-                      {getStatusBadge(order.delivery_status, 'delivery')}
+                      {getStatusBadge(order.order_status, 'delivery')}
                     </div>
                   </div>
                 </div>
@@ -535,10 +535,10 @@ const Orders = () => {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Statut livraison</label>
+                      <label className="text-sm font-medium mb-2 block">Statut commande</label>
                       <Select 
-                        value={editStatus.delivery_status} 
-                        onValueChange={v => setEditStatus(s => ({ ...s, delivery_status: v }))}
+                        value={editStatus.order_status} 
+                        onValueChange={v => setEditStatus(s => ({ ...s, order_status: v }))}
                       >
                         <SelectTrigger className="bg-black/50 border-gold/20">
                           <SelectValue />

@@ -7,7 +7,7 @@ import Footer from '@/components/Layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Phone, Mail, Star } from 'lucide-react';
+import { MapPin, Phone, Mail, Star, MessageCircle, Users, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Seller {
@@ -70,6 +70,19 @@ const LocalSellers = () => {
     }
   };
 
+  const handleWhatsAppContact = (phone: string, businessName: string) => {
+    const message = `Bonjour, je suis intéressé par les produits de ${businessName}. Pouvez-vous me donner plus d'informations ?`;
+    const whatsappUrl = `https://wa.me/213${phone.substring(1)}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleChatContact = (sellerId: string, businessName: string) => {
+    // For now, redirect to WhatsApp. Later, implement internal chat system
+    const message = `Bonjour, je souhaite discuter via votre boutique ${businessName}.`;
+    const whatsappUrl = `https://wa.me/213?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -94,12 +107,13 @@ const LocalSellers = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {sellers.map((seller) => (
-            <Card key={seller.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all">
+            <Card key={seller.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all group">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-semibold gold-text">{seller.business_name}</h3>
                     <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                      <Store className="h-3 w-3 mr-1" />
                       Actif
                     </Badge>
                   </div>
@@ -107,6 +121,10 @@ const LocalSellers = () => {
                   <p className="text-muted-foreground">{seller.description}</p>
                   
                   <div className="space-y-2 text-sm">
+                    <div className="flex items-center text-muted-foreground">
+                      <Users className="h-4 w-4 mr-2" />
+                      {seller.profiles.full_name}
+                    </div>
                     <div className="flex items-center text-muted-foreground">
                       <Phone className="h-4 w-4 mr-2" />
                       {seller.profiles.phone}
@@ -117,12 +135,32 @@ const LocalSellers = () => {
                     </div>
                   </div>
 
-                  <div className="flex space-x-2">
-                    <Button asChild className="flex-1 btn-gold">
+                  <div className="space-y-2">
+                    <Button asChild className="w-full btn-gold">
                       <Link to={`/shop/${seller.slug}`}>
                         Voir la boutique
                       </Link>
                     </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        onClick={() => handleWhatsAppContact(seller.profiles.phone, seller.business_name)}
+                        variant="outline"
+                        size="sm"
+                        className="border-green-500 text-green-400 hover:bg-green-500/10"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </Button>
+                      <Button 
+                        onClick={() => handleChatContact(seller.id, seller.business_name)}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Chat
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -132,6 +170,7 @@ const LocalSellers = () => {
 
         {sellers.length === 0 && (
           <div className="text-center py-12">
+            <Store className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Aucun vendeur local disponible pour le moment.</p>
           </div>
         )}
