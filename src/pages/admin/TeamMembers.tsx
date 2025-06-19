@@ -1,64 +1,77 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { utils, writeFile } from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Download, Users, Trophy, DollarSign, Star, Eye, Edit, Trash2 } from 'lucide-react';
+import { Search, Edit, Ban, CheckCircle, Crown, Users, TrendingUp, Star } from 'lucide-react';
+
+interface TeamMember {
+  id: string;
+  user_id: string;
+  promo_code: string;
+  rank: number;
+  is_active: boolean;
+  total_sales: number;
+  commission_earned: number;
+  created_at: string;
+  profiles: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
+}
 
 const TeamMembers = () => {
-  const [members, setMembers] = useState<any[]>([]);
-  const [filter, setFilter] = useState('');
-  const [rankFilter, setRankFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selected, setSelected] = useState<any | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editData, setEditData] = useState({ rank: 1, available_commissions: 0 });
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    totalSales: 0,
-    totalCommissions: 0
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [newRank, setNewRank] = useState<number>(1);
   const { toast } = useToast();
+
+  // Statistiques
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    activeMembers: 0,
+    totalCommissions: 0,
+    topPerformer: null as TeamMember | null
+  });
 
   useEffect(() => {
     fetchMembers();
   }, []);
 
+  useEffect(() => {
+    filterMembers();
+    calculateStats();
+  }, [members, searchTerm, statusFilter]);
+
   const fetchMembers = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('team_members')
         .select(`
           *,
-          profiles (full_name, email, phone)
+          profiles(full_name, email, phone)
         `)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       
-      setMembers(data || []);
-      
-      // Calculer les statistiques
-      const total = data?.length || 0;
-      const active = data?.filter(m => m.is_active).length || 0;
-      const totalSales = data?.reduce((sum, m) => sum + (m.total_sales || 0), 0) || 0;
-      const totalCommissions = data?.reduce((sum, m) => sum + (m.total_commissions || 0), 0) || 0;
-      
-      setStats({ total, active, totalSales, totalCommissions });
+      if (data) {
+        setMembers(data);
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de charger les membres de l'équipe",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -66,451 +79,336 @@ const TeamMembers = () => {
     }
   };
 
-  const exportCSV = () => {
-    const exportData = filtered.map(member => ({
-      'Nom': member.profiles?.full_name || 'N/A',
-      'Email': member.profiles?.email || 'N/A',
-      'Téléphone': member.profiles?.phone || 'N/A',
-      'Code promo': member.promo_code,
-      'Rang': member.rank,
-      'Ventes totales': member.total_sales || 0,
-      'Commissions totales': member.total_commissions || 0,
-      'Commissions disponibles': member.available_commissions || 0,
-      'Statut': member.is_active ? 'Actif' : 'Inactif',
-      'Date d\'inscription': new Date(member.created_at).toLocaleDateString('fr-FR')
-    }));
-    
-    const ws = utils.json_to_sheet(exportData);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'Membres_Equipe');
-    writeFile(wb, `membres_equipe_${new Date().toISOString().split('T')[0]}.xlsx`);
-    
-    toast({
-      title: "Export réussi",
-      description: "Les membres ont été exportés avec succès",
+  const filterMembers = () => {
+    let filtered = members;
+
+    if (searchTerm) {
+      filtered = filtered.filter(member =>
+        member.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.profiles.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.promo_code.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(member => 
+        statusFilter === 'active' ? member.is_active : !member.is_active
+      );
+    }
+
+    setFilteredMembers(filtered);
+  };
+
+  const calculateStats = () => {
+    const totalMembers = members.length;
+    const activeMembers = members.filter(m => m.is_active).length;
+    const totalCommissions = members.reduce((sum, m) => sum + m.commission_earned, 0);
+    const topPerformer = members.reduce((top, member) => 
+      !top || member.total_sales > top.total_sales ? member : top, 
+      null as TeamMember | null
+    );
+
+    setStats({
+      totalMembers,
+      activeMembers,
+      totalCommissions,
+      topPerformer
     });
   };
 
-  const filtered = members.filter(m => {
-    const matchesSearch = 
-      (m.profiles?.full_name || '').toLowerCase().includes(filter.toLowerCase()) ||
-      (m.profiles?.email || '').toLowerCase().includes(filter.toLowerCase()) ||
-      (m.promo_code || '').toLowerCase().includes(filter.toLowerCase());
-    
-    const matchesRank = rankFilter === 'all' || m.rank.toString() === rankFilter;
-    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? m.is_active : !m.is_active);
-    
-    return matchesSearch && matchesRank && matchesStatus;
-  });
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce membre ?')) return;
-    
-    try {
-      const { error } = await supabase.from('team_members').delete().eq('id', id);
-      if (error) throw error;
-      
-      setMembers(members => members.filter(m => m.id !== id));
-      toast({ 
-        title: 'Membre supprimé',
-        description: 'Le membre a été supprimé avec succès'
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le membre",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEdit = async () => {
-    if (!selected) return;
-    
+  const handleStatusChange = async (memberId: string, newStatus: boolean) => {
     try {
       const { error } = await supabase
         .from('team_members')
-        .update({ 
-          rank: editData.rank,
-          available_commissions: editData.available_commissions,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selected.id);
-      
+        .update({ is_active: newStatus })
+        .eq('id', memberId);
+
       if (error) throw error;
-      
-      setMembers(members => members.map(m => 
-        m.id === selected.id 
-          ? { ...m, ...editData, updated_at: new Date().toISOString() } 
-          : m
-      ));
-      
-      toast({ 
-        title: 'Membre modifié',
-        description: 'Les informations ont été mises à jour avec succès'
+
+      toast({
+        title: "Statut mis à jour",
+        description: `Le membre a été ${newStatus ? 'activé' : 'désactivé'}`,
       });
-      setEditMode(false);
+
+      fetchMembers();
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de modifier le membre",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const toggleMemberStatus = async (id: string, currentStatus: boolean) => {
+  const handleRankUpdate = async (memberId: string, rank: number) => {
     try {
       const { error } = await supabase
         .from('team_members')
-        .update({ is_active: !currentStatus })
-        .eq('id', id);
-      
+        .update({ rank })
+        .eq('id', memberId);
+
       if (error) throw error;
-      
-      setMembers(members => members.map(m => 
-        m.id === id ? { ...m, is_active: !currentStatus } : m
-      ));
-      
-      toast({ 
-        title: currentStatus ? 'Membre désactivé' : 'Membre activé',
-        description: 'Le statut a été mis à jour avec succès'
+
+      toast({
+        title: "Rang mis à jour",
+        description: `Le rang du membre a été mis à jour au niveau ${rank}`,
       });
+
+      setEditingMember(null);
+      fetchMembers();
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de modifier le statut",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const getRankBadge = (rank: number) => {
-    const colors = {
-      1: 'bg-gray-600',
-      2: 'bg-yellow-600',
-      3: 'bg-orange-600',
-      4: 'bg-red-600',
-      5: 'bg-purple-600'
-    };
-    
-    return (
-      <Badge className={`${colors[rank as keyof typeof colors] || 'bg-gray-600'} text-white border-0`}>
-        Rang {rank}
-      </Badge>
-    );
+  const getRankInfo = (rank: number) => {
+    const ranks = [
+      { level: 1, title: "Ambassadeur", commission: 6, icon: "🥉" },
+      { level: 2, title: "Ambassadeur Bronze", commission: 8, icon: "🥈" },
+      { level: 3, title: "Ambassadeur Argent", commission: 10, icon: "🥇" },
+      { level: 4, title: "Ambassadeur Or", commission: 12, icon: "👑" },
+      { level: 5, title: "Manager", commission: 12, icon: "💎" },
+    ];
+    return ranks.find(r => r.level === rank) || ranks[0];
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="glass-effect border-gold/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Gestion des Membres de la Team</h1>
+      </div>
+
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="glass-effect border-blue-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Users className="h-8 w-8 text-blue-400" />
               <div>
+                <p className="text-2xl font-bold text-blue-400">{stats.totalMembers}</p>
                 <p className="text-sm text-muted-foreground">Total Membres</p>
-                <p className="text-2xl font-bold text-gold">{stats.total}</p>
               </div>
-              <Users className="h-8 w-8 text-gold" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-effect border-gold/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <Card className="glass-effect border-green-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="h-8 w-8 text-green-400" />
               <div>
+                <p className="text-2xl font-bold text-green-400">{stats.activeMembers}</p>
                 <p className="text-sm text-muted-foreground">Membres Actifs</p>
-                <p className="text-2xl font-bold text-green-500">{stats.active}</p>
               </div>
-              <Star className="h-8 w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="glass-effect border-gold/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-8 w-8 text-gold" />
               <div>
-                <p className="text-sm text-muted-foreground">Ventes Totales</p>
-                <p className="text-2xl font-bold text-blue-500">{stats.totalSales}</p>
+                <p className="text-2xl font-bold gold-text">{stats.totalCommissions.toLocaleString()} DA</p>
+                <p className="text-sm text-muted-foreground">Total Commissions</p>
               </div>
-              <Trophy className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-effect border-gold/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <Card className="glass-effect border-purple-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Star className="h-8 w-8 text-purple-400" />
               <div>
-                <p className="text-sm text-muted-foreground">Commissions</p>
-                <p className="text-2xl font-bold text-gold">{stats.totalCommissions.toLocaleString()} DA</p>
+                <p className="text-sm font-bold text-purple-400">
+                  {stats.topPerformer ? stats.topPerformer.profiles.full_name : 'N/A'}
+                </p>
+                <p className="text-xs text-muted-foreground">Top Performer</p>
               </div>
-              <DollarSign className="h-8 w-8 text-gold" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Membres de l'Équipe</h1>
-          <p className="text-muted-foreground">
-            {filtered.length} membre(s) sur {members.length} au total
-          </p>
-        </div>
-        <Button onClick={exportCSV} className="btn-gold">
-          <Download className="h-4 w-4 mr-2" />
-          Exporter Excel
-        </Button>
-      </div>
-
-      {/* Filters */}
+      {/* Filtres */}
       <Card className="glass-effect border-gold/20">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Rechercher par nom, email ou code..."
-                className="pl-10 bg-black/50 border-gold/20"
-                value={filter}
-                onChange={e => setFilter(e.target.value)}
-              />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <Label htmlFor="search">Rechercher</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Nom, email ou code promo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
-            
-            <Select value={rankFilter} onValueChange={setRankFilter}>
-              <SelectTrigger className="bg-black/50 border-gold/20">
-                <SelectValue placeholder="Filtrer par rang" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les rangs</SelectItem>
-                <SelectItem value="1">Rang 1</SelectItem>
-                <SelectItem value="2">Rang 2</SelectItem>
-                <SelectItem value="3">Rang 3</SelectItem>
-                <SelectItem value="4">Rang 4</SelectItem>
-                <SelectItem value="5">Rang 5</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="bg-black/50 border-gold/20">
-                <SelectValue placeholder="Filtrer par statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="active">Actif</SelectItem>
-                <SelectItem value="inactive">Inactif</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="text-sm text-muted-foreground flex items-center">
-              Résultats: {filtered.length} membre(s)
+            <div className="w-full md:w-48">
+              <Label>Statut</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="active">Actifs</SelectItem>
+                  <SelectItem value="inactive">Inactifs</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Members Grid */}
+      {/* Liste des membres */}
       <div className="grid gap-4">
-        {filtered.length === 0 ? (
-          <Card className="glass-effect border-gold/20">
-            <CardContent className="text-center py-12">
-              <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucun membre trouvé</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filtered.map(member => (
-            <Card key={member.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-colors">
-              <CardHeader>
+        {filteredMembers.map((member) => {
+          const rankInfo = getRankInfo(member.rank);
+          return (
+            <Card key={member.id} className="glass-effect border-gold/20">
+              <CardContent className="p-6">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <span>{member.profiles?.full_name || 'Nom non défini'}</span>
-                      {getRankBadge(member.rank)}
-                      <Badge variant={member.is_active ? "default" : "secondary"}>
-                        {member.is_active ? "Actif" : "Inactif"}
+                    <div className="flex items-center space-x-3 mb-3">
+                      <h3 className="font-semibold text-lg">{member.profiles.full_name}</h3>
+                      <Badge className={`${member.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {member.is_active ? 'Actif' : 'Inactif'}
                       </Badge>
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                      <span>{member.profiles?.email}</span>
-                      <span>•</span>
-                      <span>Code: {member.promo_code}</span>
+                      <Badge className="bg-gold/20 text-gold">
+                        {rankInfo.icon} {rankInfo.title}
+                      </Badge>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-gold">
-                      {member.total_commissions?.toLocaleString() || 0} DA
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Email</p>
+                        <p>{member.profiles.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Code Promo</p>
+                        <p className="font-mono text-gold">{member.promo_code}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Ventes Totales</p>
+                        <p className="font-semibold">{member.total_sales}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Commissions</p>
+                        <p className="font-semibold gold-text">{member.commission_earned.toLocaleString()} DA</p>
+                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {member.total_sales || 0} vente(s)
-                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Membre depuis le {new Date(member.created_at).toLocaleDateString()}
+                    </p>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm space-y-1">
-                    <div>Commissions disponibles: <span className="text-gold font-medium">{member.available_commissions?.toLocaleString() || 0} DA</span></div>
-                    <div>Téléphone: {member.profiles?.phone || 'N/A'}</div>
-                    <div>Inscrit le: {new Date(member.created_at).toLocaleDateString('fr-FR')}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => { setSelected(member); setModalOpen(true); setEditMode(false); }}
-                      className="btn-gold"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Voir
-                    </Button>
+                  
+                  <div className="flex space-x-2">
                     <Button
                       size="sm"
-                      variant={member.is_active ? "secondary" : "default"}
-                      onClick={() => toggleMemberStatus(member.id, member.is_active)}
+                      variant="outline"
+                      onClick={() => {
+                        setEditingMember(member);
+                        setNewRank(member.rank);
+                      }}
+                      className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
                     >
-                      {member.is_active ? "Désactiver" : "Activer"}
+                      <Edit className="h-4 w-4 mr-1" />
+                      Modifier Rang
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      onClick={() => handleDelete(member.id)}
+                    
+                    <Button
+                      size="sm"
+                      variant={member.is_active ? "destructive" : "default"}
+                      onClick={() => handleStatusChange(member.id, !member.is_active)}
+                      className={member.is_active ? "" : "bg-green-500 hover:bg-green-600"}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {member.is_active ? <Ban className="h-4 w-4 mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                      {member.is_active ? 'Désactiver' : 'Activer'}
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
+          );
+        })}
       </div>
 
-      {/* Member Detail Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="glass-effect border-gold/20 max-w-4xl">
-          <DialogTitle>Détail du membre - {selected?.profiles?.full_name}</DialogTitle>
-          {selected && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="glass-effect border-gold/20">
-                  <CardHeader>
-                    <CardTitle>Informations personnelles</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div><strong>Nom:</strong> {selected.profiles?.full_name || 'N/A'}</div>
-                    <div><strong>Email:</strong> {selected.profiles?.email || 'N/A'}</div>
-                    <div><strong>Téléphone:</strong> {selected.profiles?.phone || 'N/A'}</div>
-                    <div><strong>Code promo:</strong> <Badge variant="outline">{selected.promo_code}</Badge></div>
-                    <div><strong>Date d'inscription:</strong> {new Date(selected.created_at).toLocaleDateString('fr-FR')}</div>
-                    <div><strong>Statut:</strong> 
-                      <Badge variant={selected.is_active ? "default" : "secondary"} className="ml-2">
-                        {selected.is_active ? "Actif" : "Inactif"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
+      {filteredMembers.length === 0 && (
+        <Card className="glass-effect border-gold/20">
+          <CardContent className="p-8 text-center">
+            <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">Aucun membre trouvé.</p>
+          </CardContent>
+        </Card>
+      )}
 
-                <Card className="glass-effect border-gold/20">
-                  <CardHeader>
-                    <CardTitle>Statistiques de vente</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div><strong>Rang:</strong> {getRankBadge(selected.rank)}</div>
-                    <div><strong>Ventes totales:</strong> <span className="text-blue-500 font-bold">{selected.total_sales || 0}</span></div>
-                    <div><strong>Commissions totales:</strong> <span className="text-gold font-bold">{selected.total_commissions?.toLocaleString() || 0} DA</span></div>
-                    <div><strong>Commissions disponibles:</strong> <span className="text-green-500 font-bold">{selected.available_commissions?.toLocaleString() || 0} DA</span></div>
-                    {selected.invited_by && (
-                      <div><strong>Invité par:</strong> {selected.invited_by}</div>
-                    )}
-                  </CardContent>
-                </Card>
+      {/* Modal de modification du rang */}
+      {editingMember && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 glass-effect border-gold/20">
+            <CardHeader>
+              <CardTitle>Modifier le rang de {editingMember.profiles.full_name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Nouveau rang (1-5)</Label>
+                <Select 
+                  value={newRank.toString()} 
+                  onValueChange={(value) => setNewRank(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map(rank => {
+                      const info = getRankInfo(rank);
+                      return (
+                        <SelectItem key={rank} value={rank.toString()}>
+                          {info.icon} Rang {rank} - {info.title} ({info.commission}%)
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {editMode && (
-                <Card className="glass-effect border-gold/20">
-                  <CardHeader>
-                    <CardTitle>Modifier les informations</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Rang</label>
-                        <Select 
-                          value={editData.rank.toString()} 
-                          onValueChange={v => setEditData(d => ({ ...d, rank: parseInt(v) }))}
-                        >
-                          <SelectTrigger className="bg-black/50 border-gold/20">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Rang 1</SelectItem>
-                            <SelectItem value="2">Rang 2</SelectItem>
-                            <SelectItem value="3">Rang 3</SelectItem>
-                            <SelectItem value="4">Rang 4</SelectItem>
-                            <SelectItem value="5">Rang 5</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Commissions disponibles (DA)</label>
-                        <Input
-                          type="number"
-                          value={editData.available_commissions}
-                          onChange={e => setEditData(d => ({ ...d, available_commissions: parseFloat(e.target.value) || 0 }))}
-                          className="bg-black/50 border-gold/20"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="flex gap-3 justify-end">
-                <Button variant="outline" onClick={() => setModalOpen(false)}>
-                  Fermer
+              
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => handleRankUpdate(editingMember.id, newRank)}
+                  className="btn-gold flex-1"
+                >
+                  Confirmer
                 </Button>
-                {!editMode ? (
-                  <Button 
-                    onClick={() => {
-                      setEditMode(true);
-                      setEditData({
-                        rank: selected.rank,
-                        available_commissions: selected.available_commissions || 0
-                      });
-                    }}
-                    className="btn-gold"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Modifier
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="outline" onClick={() => setEditMode(false)}>
-                      Annuler
-                    </Button>
-                    <Button onClick={handleEdit} className="btn-gold">
-                      Sauvegarder
-                    </Button>
-                  </>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingMember(null)}
+                  className="border-gold/20"
+                >
+                  Annuler
+                </Button>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

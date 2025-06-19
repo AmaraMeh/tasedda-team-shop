@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
-import InvitationCodeModal from '@/components/InvitationCodeModal';
 import ContactButton from '@/components/ContactButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,15 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Store, Package, TrendingUp, Users, CheckCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
 
 const Seller = () => {
-  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const [dataLoading, setDataLoading] = useState(true);
   const [isSeller, setIsSeller] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
-  const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [selectedType, setSelectedType] = useState<'normal' | 'wholesale'>('normal');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,11 +48,6 @@ const Seller = () => {
     } finally {
       setDataLoading(false);
     }
-  };
-
-  const handleInvitationSuccess = () => {
-    setShowInvitationModal(false);
-    becomeSeller();
   };
 
   const becomeSeller = async () => {
@@ -93,7 +84,7 @@ const Seller = () => {
 
       const businessName = profile?.full_name || 'Ma Boutique';
       
-      // Créer le seller avec génération automatique du slug
+      // Créer le seller directement sans code d'invitation
       const { data: newSeller, error } = await supabase
         .from('sellers')
         .insert({
@@ -340,12 +331,12 @@ const Seller = () => {
                   Créer ma boutique
                 </CardTitle>
                 <p className="text-muted-foreground text-lg">
-                  Commencez avec un code d'invitation
+                  Commencez dès maintenant sans code d'invitation
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Button 
-                  onClick={() => setShowInvitationModal(true)}
+                  onClick={becomeSeller}
                   className="w-full btn-gold text-lg py-3" 
                   disabled={dataLoading}
                 >
@@ -358,13 +349,6 @@ const Seller = () => {
           </div>
         </section>
       </main>
-
-      <InvitationCodeModal
-        isOpen={showInvitationModal}
-        onClose={() => setShowInvitationModal(false)}
-        type="seller"
-        onSuccess={handleInvitationSuccess}
-      />
 
       <Footer />
     </div>

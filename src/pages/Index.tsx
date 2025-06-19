@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -104,46 +105,48 @@ const Index = () => {
       <Header />
       <HeroSection showTeamCTA={false} showSellerCTA={false} />
       
-      {/* Quick Access Cards */}
+      {/* Quick Access Cards - Images Cliquables */}
       <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             {/* Products Card */}
-            <Link to="/products">
-              <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all group cursor-pointer h-48 relative overflow-hidden">
+            <Link to="/products" className="group">
+              <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all cursor-pointer h-64 relative overflow-hidden">
                 <div 
-                  className="absolute inset-0 bg-cover bg-center opacity-30"
+                  className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform"
                   style={{ backgroundImage: `url('/lovable-uploads/251cb271-71b7-4322-aea7-f6a6891f24ee.png')` }}
                 />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                 <CardContent className="p-6 h-full flex flex-col justify-center items-center text-center relative z-10">
                   <div className="mb-4">
-                    <ShoppingBag className="h-12 w-12 mx-auto text-gold mb-2" />
-                    <h3 className="text-xl font-bold text-white">PRODUITS</h3>
-                    <p className="text-sm text-muted-foreground">Découvrez notre collection</p>
+                    <ShoppingBag className="h-16 w-16 mx-auto text-gold mb-4 group-hover:scale-110 transition-transform" />
+                    <h3 className="text-2xl font-bold text-white mb-2">PRODUITS LION</h3>
+                    <p className="text-sm text-white/80">Découvrez notre collection exclusive</p>
                   </div>
                   <Button className="btn-gold group-hover:scale-105 transition-transform">
-                    Explorer
+                    Explorer maintenant
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
               </Card>
             </Link>
 
-            {/* Other Products Card */}
-            <Link to="/local-sellers">
-              <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all group cursor-pointer h-48 relative overflow-hidden">
+            {/* Local Sellers Card */}
+            <Link to="/local-sellers" className="group">
+              <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all cursor-pointer h-64 relative overflow-hidden">
                 <div 
-                  className="absolute inset-0 bg-cover bg-center opacity-30"
+                  className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform"
                   style={{ backgroundImage: `url('/lovable-uploads/606c0a0e-b8c6-44e6-b936-ca194681c1ca.png')` }}
                 />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                 <CardContent className="p-6 h-full flex flex-col justify-center items-center text-center relative z-10">
                   <div className="mb-4">
-                    <Store className="h-12 w-12 mx-auto text-gold mb-2" />
-                    <h3 className="text-xl font-bold text-white">AUTRES PRODUITS</h3>
-                    <p className="text-sm text-muted-foreground">اكتشف منتجات أخرى</p>
+                    <Store className="h-16 w-16 mx-auto text-gold mb-4 group-hover:scale-110 transition-transform" />
+                    <h3 className="text-2xl font-bold text-white mb-2">VENDEURS LOCAUX</h3>
+                    <p className="text-sm text-white/80">اكتشف منتجات محلية متنوعة</p>
                   </div>
                   <Button className="btn-gold group-hover:scale-105 transition-transform">
-                    Découvrir
+                    Découvrir les boutiques
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -151,20 +154,21 @@ const Index = () => {
             </Link>
 
             {/* Wholesale Card */}
-            <Link to="/wholesalers">
-              <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all group cursor-pointer h-48 relative overflow-hidden">
+            <Link to="/wholesalers" className="group">
+              <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all cursor-pointer h-64 relative overflow-hidden">
                 <div 
-                  className="absolute inset-0 bg-cover bg-center opacity-30"
+                  className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform"
                   style={{ backgroundImage: `url('/lovable-uploads/d0ab850d-a24b-4ea3-be45-15175fe9f621.png')` }}
                 />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                 <CardContent className="p-6 h-full flex flex-col justify-center items-center text-center relative z-10">
                   <div className="mb-4">
-                    <Package className="h-12 w-12 mx-auto text-gold mb-2" />
-                    <h3 className="text-xl font-bold text-white">ACHETEZ EN GROS</h3>
-                    <p className="text-sm text-muted-foreground">اشتر بالجملة</p>
+                    <Package className="h-16 w-16 mx-auto text-gold mb-4 group-hover:scale-110 transition-transform" />
+                    <h3 className="text-2xl font-bold text-white mb-2">ACHAT EN GROS</h3>
+                    <p className="text-sm text-white/80">اشتر بالجملة بأسعار تنافسية</p>
                   </div>
                   <Button className="btn-gold group-hover:scale-105 transition-transform">
-                    Acheter
+                    Acheter en gros
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
