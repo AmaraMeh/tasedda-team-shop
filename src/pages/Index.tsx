@@ -105,7 +105,7 @@ const Index = () => {
       <Header />
       <HeroSection showTeamCTA={false} showSellerCTA={false} />
       
-      {/* Quick Access Cards - Images Cliquables */}
+      {/* Quick Access Cards - Images des photos uploadées */}
       <section className="py-12 md:py-16 px-4">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -114,17 +114,17 @@ const Index = () => {
               <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all cursor-pointer h-64 relative overflow-hidden">
                 <div 
                   className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform"
-                  style={{ backgroundImage: `url('/lovable-uploads/251cb271-71b7-4322-aea7-f6a6891f24ee.png')` }}
+                  style={{ backgroundImage: `url('/lovable-uploads/fabf8608-433a-4fed-81c3-eeded5001f19.png')` }}
                 />
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                 <CardContent className="p-6 h-full flex flex-col justify-center items-center text-center relative z-10">
                   <div className="mb-4">
                     <ShoppingBag className="h-16 w-16 mx-auto text-gold mb-4 group-hover:scale-110 transition-transform" />
                     <h3 className="text-2xl font-bold text-white mb-2">PRODUITS LION</h3>
-                    <p className="text-sm text-white/80">Découvrez notre collection exclusive</p>
+                    <p className="text-sm text-white/80">اكتشف مجموعتنا الحصرية</p>
                   </div>
                   <Button className="btn-gold group-hover:scale-105 transition-transform">
-                    Explorer maintenant
+                    تسوق الآن
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -136,17 +136,17 @@ const Index = () => {
               <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all cursor-pointer h-64 relative overflow-hidden">
                 <div 
                   className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform"
-                  style={{ backgroundImage: `url('/lovable-uploads/606c0a0e-b8c6-44e6-b936-ca194681c1ca.png')` }}
+                  style={{ backgroundImage: `url('/lovable-uploads/fb7cd1a8-88d6-49c4-8439-032980fbef6a.png')` }}
                 />
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                 <CardContent className="p-6 h-full flex flex-col justify-center items-center text-center relative z-10">
                   <div className="mb-4">
                     <Store className="h-16 w-16 mx-auto text-gold mb-4 group-hover:scale-110 transition-transform" />
-                    <h3 className="text-2xl font-bold text-white mb-2">VENDEURS LOCAUX</h3>
+                    <h3 className="text-2xl font-bold text-white mb-2">البائعون المحليون</h3>
                     <p className="text-sm text-white/80">اكتشف منتجات محلية متنوعة</p>
                   </div>
                   <Button className="btn-gold group-hover:scale-105 transition-transform">
-                    Découvrir les boutiques
+                    اكتشف المتاجر
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -158,17 +158,17 @@ const Index = () => {
               <Card className="glass-effect border-gold/20 hover:border-gold/40 transition-all cursor-pointer h-64 relative overflow-hidden">
                 <div 
                   className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform"
-                  style={{ backgroundImage: `url('/lovable-uploads/d0ab850d-a24b-4ea3-be45-15175fe9f621.png')` }}
+                  style={{ backgroundImage: `url('/lovable-uploads/a0ba44eb-f1fc-4d9b-acdd-44bd17e76522.png')` }}
                 />
                 <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                 <CardContent className="p-6 h-full flex flex-col justify-center items-center text-center relative z-10">
                   <div className="mb-4">
                     <Package className="h-16 w-16 mx-auto text-gold mb-4 group-hover:scale-110 transition-transform" />
-                    <h3 className="text-2xl font-bold text-white mb-2">ACHAT EN GROS</h3>
-                    <p className="text-sm text-white/80">اشتر بالجملة بأسعار تنافسية</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">الشراء بالجملة</h3>
+                    <p className="text-sm text-white/80">اشترِ بالجملة بأسعار تنافسية</p>
                   </div>
                   <Button className="btn-gold group-hover:scale-105 transition-transform">
-                    Acheter en gros
+                    اشترِ بالجملة
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -190,7 +190,7 @@ const Index = () => {
                 </h2>
               </div>
               <p className="text-lg md:text-xl text-muted-foreground">
-                Découvrez notre collection exclusive de la marque Tasedda
+                اكتشف مجموعتنا الحصرية من علامة تاسعدة التجارية
               </p>
             </div>
             
@@ -204,7 +204,7 @@ const Index = () => {
               <Button asChild className="btn-gold">
                 <Link to="/products">
                   <Package className="h-4 w-4 mr-2" />
-                  Voir tous les produits
+                  عرض جميع المنتجات
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
@@ -219,10 +219,10 @@ const Index = () => {
           <div className="container mx-auto">
             <div className="text-center mb-8 md:mb-12">
               <h2 className="text-2xl md:text-4xl font-bold mb-4 text-white">
-                Produits de nos <span className="gold-text">Vendeurs</span>
+                منتجات <span className="gold-text">البائعين</span> المحليين
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground">
-                Découvrez une sélection de produits de nos vendeurs partenaires
+                اكتشف مجموعة منتجات من شركائنا البائعين
               </p>
             </div>
             
@@ -235,7 +235,7 @@ const Index = () => {
             <div className="text-center mt-8">
               <Button asChild className="btn-gold">
                 <Link to="/local-sellers">
-                  Voir tous les vendeurs
+                  عرض جميع البائعين
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
@@ -250,10 +250,10 @@ const Index = () => {
           <div className="container mx-auto">
             <div className="text-center mb-8 md:mb-12">
               <h2 className="text-2xl md:text-4xl font-bold mb-4 text-white">
-                Produits <span className="gold-text">Grossistes</span>
+                منتجات <span className="gold-text">تجار الجملة</span>
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground">
-                Achetez en gros auprès de nos grossistes partenaires
+                اشترِ بالجملة من شركائنا تجار الجملة
               </p>
             </div>
             
@@ -266,7 +266,7 @@ const Index = () => {
             <div className="text-center mt-8">
               <Button asChild className="btn-gold">
                 <Link to="/wholesalers">
-                  Voir tous les grossistes
+                  عرض جميع تجار الجملة
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
@@ -283,14 +283,14 @@ const Index = () => {
             style={{ backgroundImage: `url('/lovable-uploads/fa144c93-891b-489c-a150-881188b619d4.png')` }}
           />
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-            Rejoignez <span className="gold-text">LION TEAM DZ</span>
+            انضم إلى <span className="gold-text">فريق LION DZ</span>
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Gagnez des commissions en rejoignant notre équipe de vente et développez votre réseau
+            احصل على عمولات من خلال الانضمام إلى فريق المبيعات لدينا وطور شبكتك
           </p>
           <Button asChild className="btn-gold text-lg px-8 py-3">
             <Link to="/team">
-              Rejoindre l'équipe
+              انضم إلى الفريق
               <Crown className="h-5 w-5 ml-2" />
             </Link>
           </Button>

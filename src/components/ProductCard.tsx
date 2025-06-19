@@ -28,9 +28,16 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
       price: product.price,
       image: product.image_url || product.image || '/placeholder.svg',
       category: product.category || 'Sans catégorie',
-      sizes: selectedSize || undefined,
-      colors: selectedColor || undefined,
-      quantity: 1
+      size: selectedSize || undefined,
+      color: selectedColor || undefined,
+      quantity: 1,
+      product: {
+        ...product,
+        image_url: product.image_url || '/placeholder.svg',
+        description: product.description || '',
+        inStock: product.inStock !== false,
+        is_featured: product.is_featured || false
+      }
     };
     
     addToCart(cartItem);

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Edit, Ban, CheckCircle, Crown, Users, TrendingUp, Star } from 'lucide-react';
+import { Search, Edit, Ban, CheckCircle, Crown, Users, TrendingUp, Star, Plus, Copy } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -18,6 +18,8 @@ interface TeamMember {
   is_active: boolean;
   total_sales: number;
   commission_earned: number;
+  total_commissions: number;
+  available_commissions: number;
   created_at: string;
   profiles: {
     full_name: string;
@@ -34,6 +36,8 @@ const TeamMembers = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [newRank, setNewRank] = useState<number>(1);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
   const { toast } = useToast();
 
   // Statistiques
@@ -66,7 +70,11 @@ const TeamMembers = () => {
       if (error) throw error;
       
       if (data) {
-        setMembers(data);
+        const mappedMembers = data.map(item => ({
+          ...item,
+          commission_earned: item.total_commissions || 0
+        }));
+        setMembers(mappedMembers);
       }
     } catch (error: any) {
       toast({
@@ -102,7 +110,7 @@ const TeamMembers = () => {
   const calculateStats = () => {
     const totalMembers = members.length;
     const activeMembers = members.filter(m => m.is_active).length;
-    const totalCommissions = members.reduce((sum, m) => sum + m.commission_earned, 0);
+    const totalCommissions = members.reduce((sum, m) => sum + (m.total_commissions || 0), 0);
     const topPerformer = members.reduce((top, member) => 
       !top || member.total_sales > top.total_sales ? member : top, 
       null as TeamMember | null
@@ -113,6 +121,44 @@ const TeamMembers = () => {
       activeMembers,
       totalCommissions,
       topPerformer
+    });
+  };
+
+  const generateInviteCode = async () => {
+    try {
+      const { data, error } = await supabase.rpc('generate_promo_code');
+      
+      if (error) throw error;
+      
+      const { error: insertError } = await supabase
+        .from('invitation_codes')
+        .insert({
+          code: data,
+          type: 'team',
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (insertError) throw insertError;
+
+      setInviteCode(data);
+      toast({
+        title: "Code d'invitation généré",
+        description: `Code: ${data}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copié",
+      description: "Code copié dans le presse-papiers",
     });
   };
 
@@ -188,6 +234,10 @@ const TeamMembers = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestion des Membres de la Team</h1>
+        <Button onClick={() => setShowInviteModal(true)} className="btn-gold">
+          <Plus className="h-4 w-4 mr-2" />
+          Générer Code d'Invitation
+        </Button>
       </div>
 
       {/* Statistiques */}
@@ -303,7 +353,17 @@ const TeamMembers = () => {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Code Promo</p>
-                        <p className="font-mono text-gold">{member.promo_code}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-gold">{member.promo_code}</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(member.promo_code)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Ventes Totales</p>
@@ -311,7 +371,7 @@ const TeamMembers = () => {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Commissions</p>
-                        <p className="font-semibold gold-text">{member.commission_earned.toLocaleString()} DA</p>
+                        <p className="font-semibold gold-text">{(member.total_commissions || 0).toLocaleString()} DA</p>
                       </div>
                     </div>
                     
@@ -358,6 +418,51 @@ const TeamMembers = () => {
             <p className="text-muted-foreground">Aucun membre trouvé.</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Modal de génération de code d'invitation */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4 glass-effect border-gold/20">
+            <CardHeader>
+              <CardTitle>Générer un Code d'Invitation Team</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Button onClick={generateInviteCode} className="w-full btn-gold">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Générer un nouveau code
+                </Button>
+              </div>
+              
+              {inviteCode && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm text-green-400 mb-2">Code généré:</p>
+                  <div className="flex items-center justify-between">
+                    <code className="text-lg font-bold text-gold">{inviteCode}</code>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(inviteCode)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowInviteModal(false)}
+                  className="border-gold/20 flex-1"
+                >
+                  Fermer
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Modal de modification du rang */}

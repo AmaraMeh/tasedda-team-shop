@@ -62,7 +62,7 @@
     "commissionsTitle": "نظام العمولات",
     "commissionsDesc": "احصل على عمولات من كل عملية بيع",
     "benefits": {
-      "commission": "عمولة 5% على جميع المبيعات",
+      "commission": "عمولة 6% على جميع المبيعات",
       "promoCode": "كود خصم شخصي",
       "support": "دعم مخصص",
       "training": "تدريب مجاني",
@@ -110,5 +110,25 @@
     "sales": "مبيعات",
     "eventDate": "تاريخ الحدث",
     "eventLocation": "مكان الحدث"
+  },
+  "products": {
+    "title": "المنتجات",
+    "description": "تصفح مجموعتنا الواسعة من المنتجات عالية الجودة",
+    "addToCart": "أضف إلى السلة",
+    "outOfStock": "نفدت الكمية",
+    "price": "السعر",
+    "category": "الفئة",
+    "size": "المقاس",
+    "color": "اللون",
+    "contactForPrice": "اتصل للسعر"
+  },
+  "cart": {
+    "title": "سلة التسوق",
+    "empty": "سلة التسوق فارغة",
+    "total": "المجموع",
+    "checkout": "الدفع",
+    "continue": "متابعة التسوق",
+    "remove": "إزالة",
+    "quantity": "الكمية"
   }
 }
