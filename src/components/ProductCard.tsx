@@ -22,21 +22,7 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
   console.log('ProductCard rendering with product:', product);
 
   const handleAddToCart = () => {
-    const cartItem = {
-      id: product.id,
-      product: {
-        ...product,
-        image_url: product.image_url || '/placeholder.svg',
-        description: product.description || '',
-        inStock: product.stock_quantity ? product.stock_quantity > 0 : true,
-        is_featured: product.is_featured || false
-      },
-      quantity: 1,
-      size: selectedSize || undefined,
-      color: selectedColor || undefined
-    };
-    
-    addToCart(cartItem);
+    addToCart(product, 1, selectedSize, selectedColor);
   };
 
   const handleWhatsAppContact = () => {

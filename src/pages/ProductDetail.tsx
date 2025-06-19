@@ -31,12 +31,24 @@ const ProductDetail = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          categories(name)
+        `)
         .eq('id', productId)
         .single();
 
       if (error) throw error;
-      setProduct(data);
+      
+      // Transform data to match Product type
+      const transformedProduct: Product = {
+        ...data,
+        image: data.image_url || '/placeholder.svg',
+        category: data.categories?.name || 'Sans catégorie',
+        inStock: data.stock_quantity ? data.stock_quantity > 0 : false
+      };
+      
+      setProduct(transformedProduct);
     } catch (error) {
       console.error('Error fetching product:', error);
     } finally {
@@ -46,26 +58,7 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
-    const cartItem = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image_url || '/placeholder.svg',
-      category: product.category || 'Sans catégorie',
-      size: selectedSize || undefined,
-      color: selectedColor || undefined,
-      quantity: 1,
-      product: {
-        ...product,
-        image_url: product.image_url || '/placeholder.svg',
-        description: product.description || '',
-        inStock: product.stock_quantity ? product.stock_quantity > 0 : true,
-        is_featured: product.is_featured || false
-      }
-    };
-    
-    addToCart(cartItem);
+    addToCart(product, 1, selectedSize, selectedColor);
   };
 
   const handleWhatsAppContact = () => {

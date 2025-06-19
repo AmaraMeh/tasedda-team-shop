@@ -29,7 +29,26 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
     setLoading(true);
 
     try {
-      // Vérifier si le code d'invitation existe et n'est pas utilisé
+      // Vérifier d'abord si le code est un code promo de team member
+      if (type === 'team') {
+        const { data: teamMember } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('promo_code', code.toUpperCase())
+          .eq('is_active', true)
+          .single();
+
+        if (teamMember) {
+          // Code promo valide trouvé
+          onSuccess();
+          onClose();
+          setCode('');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Sinon, vérifier les codes d'invitation classiques
       const { data: invitation, error } = await supabase
         .from('invitation_codes')
         .select('*')
@@ -44,8 +63,15 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
           description: "Ce code d'invitation n'existe pas ou a déjà été utilisé",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
+
+      // Marquer le code comme utilisé
+      await supabase
+        .from('invitation_codes')
+        .update({ is_used: true, used_at: new Date().toISOString() })
+        .eq('id', invitation.id);
 
       onSuccess();
       onClose();
@@ -73,7 +99,7 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="code">
-              Code d'invitation pour {type === 'team' ? 'rejoindre la team' : 'devenir vendeur'}
+              Code d'invitation {type === 'team' ? 'pour rejoindre la team (ou code promo d\'un membre)' : 'pour devenir vendeur'}
             </Label>
             <Input
               id="code"
@@ -83,6 +109,11 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
               required
               className="bg-black/50 border-gold/20"
             />
+            {type === 'team' && (
+              <p className="text-xs text-muted-foreground">
+                Vous pouvez utiliser un code d'invitation classique ou le code promo d'un membre actif de l'équipe.
+              </p>
+            )}
           </div>
           
           <div className="flex gap-2">

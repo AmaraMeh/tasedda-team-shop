@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,7 +82,7 @@ const Seller = () => {
 
       const businessName = profile?.full_name || 'Ma Boutique';
       
-      // Créer le seller directement sans code d'invitation
+      // Créer le seller - le slug sera généré automatiquement par le trigger
       const { data: newSeller, error } = await supabase
         .from('sellers')
         .insert({
@@ -91,7 +90,8 @@ const Seller = () => {
           business_name: businessName,
           seller_type: selectedType,
           status: 'pending',
-          description: `Boutique ${selectedType === 'wholesale' ? 'de gros' : 'locale'} de ${businessName}`
+          description: `Boutique ${selectedType === 'wholesale' ? 'de gros' : 'locale'} de ${businessName}`,
+          slug: '' // Sera généré automatiquement
         })
         .select()
         .single();
