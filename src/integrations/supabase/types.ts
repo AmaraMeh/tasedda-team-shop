@@ -762,6 +762,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_seller_slug: {
+        Args: { business_name: string; user_id: string }
+        Returns: string
+      }
       generate_shop_slug: {
         Args: { name: string }
         Returns: string

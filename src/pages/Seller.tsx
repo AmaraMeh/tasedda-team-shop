@@ -16,7 +16,6 @@ const Seller = () => {
   const { user, loading } = useAuth();
   const [dataLoading, setDataLoading] = useState(true);
   const [isSeller, setIsSeller] = useState(false);
-  const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [selectedType, setSelectedType] = useState<'normal' | 'wholesale'>('normal');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -92,8 +91,7 @@ const Seller = () => {
           business_name: businessName,
           seller_type: selectedType,
           status: 'pending',
-          description: `Boutique ${selectedType === 'wholesale' ? 'de gros' : 'locale'} de ${businessName}`,
-          slug: '' // Sera généré automatiquement par la fonction SQL
+          description: `Boutique ${selectedType === 'wholesale' ? 'de gros' : 'locale'} de ${businessName}`
         })
         .select()
         .single();
@@ -105,7 +103,7 @@ const Seller = () => {
         description: "Votre demande pour devenir vendeur a été envoyée et sera examinée par l'administration.",
       });
 
-      setHasPendingRequest(true);
+      setIsSeller(true);
     } catch (error: any) {
       toast({
         title: "Erreur",

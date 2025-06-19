@@ -24,20 +24,16 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
   const handleAddToCart = () => {
     const cartItem = {
       id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image_url || product.image || '/placeholder.svg',
-      category: product.category || 'Sans catégorie',
-      size: selectedSize || undefined,
-      color: selectedColor || undefined,
-      quantity: 1,
       product: {
         ...product,
         image_url: product.image_url || '/placeholder.svg',
         description: product.description || '',
-        inStock: product.inStock !== false,
+        inStock: product.stock_quantity ? product.stock_quantity > 0 : true,
         is_featured: product.is_featured || false
-      }
+      },
+      quantity: 1,
+      size: selectedSize || undefined,
+      color: selectedColor || undefined
     };
     
     addToCart(cartItem);
@@ -58,7 +54,7 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
       <div className="relative">
         <Link to={`/product/${product.id}`}>
           <img
-            src={product.image_url || product.image || '/placeholder.svg'}
+            src={product.image_url || '/placeholder.svg'}
             alt={product.name}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform cursor-pointer"
           />
@@ -68,7 +64,7 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
             Vedette
           </Badge>
         )}
-        {!product.inStock && (
+        {product.stock_quantity === 0 && (
           <Badge className="absolute top-2 right-2 bg-red-500">
             Rupture
           </Badge>
@@ -90,7 +86,7 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
                 {product.name}
               </h3>
             </Link>
-            <p className="text-sm text-muted-foreground">{product.category}</p>
+            <p className="text-sm text-muted-foreground">{product.category || 'Sans catégorie'}</p>
           </div>
 
           {/* Size Selection */}
@@ -149,11 +145,11 @@ const ProductCard = ({ product, showPrice = true }: ProductCardProps) => {
           )}
 
           <div className="flex gap-2">
-            {showPrice && product.inStock ? (
+            {showPrice && product.stock_quantity && product.stock_quantity > 0 ? (
               <Button
                 onClick={handleAddToCart}
                 className="flex-1 btn-gold text-sm py-2"
-                disabled={!product.inStock}
+                disabled={!product.stock_quantity || product.stock_quantity <= 0}
               >
                 <ShoppingCart className="h-4 w-4 mr-1" />
                 Ajouter

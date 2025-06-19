@@ -1,65 +1,100 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Package, ArrowLeft, Plus, X } from 'lucide-react';
+import { Package, Plus, X } from 'lucide-react';
 
 const AddProduct = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [loading, setLoading] = useState(false);
+  const [seller, setSeller] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     original_price: '',
     category_id: '',
-    stock_quantity: '',
     image_url: '',
-    is_featured: false
+    stock_quantity: '',
+    is_featured: false,
+    is_active: true
   });
+
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>([]);
   const [newSize, setNewSize] = useState('');
   const [newColor, setNewColor] = useState('');
 
-  useState(() => {
-    fetchCategories();
-  }, []);
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+      return;
+    }
+    if (user) {
+      checkSellerStatus(user.id);
+      fetchCategories();
+    }
+  }, [user, loading, navigate]);
+
+  const checkSellerStatus = async (userId: string) => {
+    try {
+      const { data: sellerData, error } = await supabase
+        .from('sellers')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        toast({
+          title: "Accès refusé",
+          description: "Vous devez être un vendeur actif pour ajouter des produits.",
+          variant: "destructive",
+        });
+        navigate('/seller');
+        return;
+      }
+
+      setSeller(sellerData);
+    } catch (error) {
+      console.error('Error checking seller status:', error);
+      navigate('/seller');
+    }
+  };
 
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .eq('is_active', true)
-        .order('name');
+        .eq('is_active', true);
 
       if (error) throw error;
-      if (data) setCategories(data);
+      setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [field]: value
     }));
   };
 
@@ -70,8 +105,8 @@ const AddProduct = () => {
     }
   };
 
-  const removeSize = (size: string) => {
-    setSizes(sizes.filter(s => s !== size));
+  const removeSize = (sizeToRemove: string) => {
+    setSizes(sizes.filter(size => size !== sizeToRemove));
   };
 
   const addColor = () => {
@@ -81,54 +116,29 @@ const AddProduct = () => {
     }
   };
 
-  const removeColor = (color: string) => {
-    setColors(colors.filter(c => c !== color));
+  const removeColor = (colorToRemove: string) => {
+    setColors(colors.filter(color => color !== colorToRemove));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour ajouter un produit",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!seller) return;
 
-    setLoading(true);
-
+    setIsSubmitting(true);
     try {
-      // Vérifier si l'utilisateur est un vendeur
-      const { data: seller, error: sellerError } = await supabase
-        .from('sellers')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
-
-      if (sellerError || !seller) {
-        toast({
-          title: "Erreur",
-          description: "Vous devez être un vendeur actif pour ajouter des produits",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const productData = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
         original_price: formData.original_price ? parseFloat(formData.original_price) : null,
         category_id: formData.category_id || null,
-        stock_quantity: parseInt(formData.stock_quantity),
-        image_url: formData.image_url,
         seller_id: seller.id,
+        image_url: formData.image_url,
+        stock_quantity: parseInt(formData.stock_quantity) || 0,
         is_featured: formData.is_featured,
+        is_active: formData.is_active,
         sizes: sizes.length > 0 ? sizes : null,
-        colors: colors.length > 0 ? colors : null,
-        is_active: true
+        colors: colors.length > 0 ? colors : null
       };
 
       const { error } = await supabase
@@ -138,63 +148,74 @@ const AddProduct = () => {
       if (error) throw error;
 
       toast({
-        title: "Produit ajouté",
-        description: "Votre produit a été ajouté avec succès",
+        title: "Produit ajouté !",
+        description: "Votre produit a été ajouté avec succès.",
       });
 
       navigate('/seller-space');
     } catch (error: any) {
+      console.error('Error adding product:', error);
       toast({
         title: "Erreur",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  if (loading || !seller) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       <Header />
       
       <main className="container mx-auto px-4 py-20">
         <div className="max-w-2xl mx-auto">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/seller-space')}
-            className="mb-6 border-gold/20 text-white hover:bg-gold/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour à l'espace vendeur
-          </Button>
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <Package className="h-12 w-12 text-gold mr-3" />
+              <h1 className="text-3xl font-display font-bold text-white">
+                Ajouter un <span className="gold-text">Produit</span>
+              </h1>
+            </div>
+            <p className="text-muted-foreground">
+              Ajoutez un nouveau produit à votre boutique
+            </p>
+          </div>
 
           <Card className="glass-effect border-gold/20">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Package className="h-6 w-6 mr-2 text-gold" />
-                Ajouter un produit
-              </CardTitle>
+              <CardTitle className="text-white">Informations du produit</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name">Nom du produit *</Label>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Nom du produit *
+                    </label>
                     <Input
-                      id="name"
-                      name="name"
                       value={formData.name}
-                      onChange={handleInputChange}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Nom du produit"
                       required
-                      className="bg-black/50 border-gold/20"
                     />
                   </div>
-
                   <div>
-                    <Label htmlFor="category_id">Catégorie</Label>
-                    <Select value={formData.category_id} onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}>
-                      <SelectTrigger className="bg-black/50 border-gold/20">
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Catégorie
+                    </label>
+                    <Select value={formData.category_id} onValueChange={(value) => handleInputChange('category_id', value)}>
+                      <SelectTrigger>
                         <SelectValue placeholder="Choisir une catégorie" />
                       </SelectTrigger>
                       <SelectContent>
@@ -209,137 +230,160 @@ const AddProduct = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Description
+                  </label>
                   <Textarea
-                    id="description"
-                    name="description"
                     value={formData.description}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="bg-black/50 border-gold/20"
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Description du produit"
+                    rows={3}
                   />
                 </div>
 
+                {/* Pricing */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="price">Prix (DA) *</Label>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Prix (DA) *
+                    </label>
                     <Input
-                      id="price"
-                      name="price"
                       type="number"
+                      step="0.01"
                       value={formData.price}
-                      onChange={handleInputChange}
+                      onChange={(e) => handleInputChange('price', e.target.value)}
+                      placeholder="0.00"
                       required
-                      className="bg-black/50 border-gold/20"
                     />
                   </div>
-
                   <div>
-                    <Label htmlFor="original_price">Prix original (DA)</Label>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Prix original (DA)
+                    </label>
                     <Input
-                      id="original_price"
-                      name="original_price"
                       type="number"
+                      step="0.01"
                       value={formData.original_price}
-                      onChange={handleInputChange}
-                      className="bg-black/50 border-gold/20"
+                      onChange={(e) => handleInputChange('original_price', e.target.value)}
+                      placeholder="0.00"
                     />
                   </div>
-
                   <div>
-                    <Label htmlFor="stock_quantity">Stock *</Label>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Stock
+                    </label>
                     <Input
-                      id="stock_quantity"
-                      name="stock_quantity"
                       type="number"
                       value={formData.stock_quantity}
-                      onChange={handleInputChange}
-                      required
-                      className="bg-black/50 border-gold/20"
+                      onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
+                      placeholder="0"
                     />
                   </div>
                 </div>
 
+                {/* Image */}
                 <div>
-                  <Label htmlFor="image_url">URL de l'image</Label>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    URL de l'image
+                  </label>
                   <Input
-                    id="image_url"
-                    name="image_url"
-                    type="url"
                     value={formData.image_url}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/image.jpg"
-                    className="bg-black/50 border-gold/20"
+                    onChange={(e) => handleInputChange('image_url', e.target.value)}
+                    placeholder="https://exemple.com/image.jpg"
                   />
                 </div>
 
                 {/* Sizes */}
                 <div>
-                  <Label>Tailles disponibles</Label>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Tailles disponibles
+                  </label>
                   <div className="flex gap-2 mb-2">
                     <Input
                       value={newSize}
                       onChange={(e) => setNewSize(e.target.value)}
-                      placeholder="Ex: S, M, L, XL"
-                      className="bg-black/50 border-gold/20"
+                      placeholder="Ajouter une taille"
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSize())}
                     />
-                    <Button type="button" onClick={addSize} variant="outline" className="border-gold/20">
+                    <Button type="button" onClick={addSize} className="btn-gold">
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {sizes.map((size) => (
-                      <span key={size} className="bg-gold/20 text-gold px-2 py-1 rounded-md text-sm flex items-center">
+                      <Badge key={size} variant="secondary" className="flex items-center gap-1">
                         {size}
-                        <button type="button" onClick={() => removeSize(size)} className="ml-2 text-red-500">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
+                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeSize(size)} />
+                      </Badge>
                     ))}
                   </div>
                 </div>
 
                 {/* Colors */}
                 <div>
-                  <Label>Couleurs disponibles</Label>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Couleurs disponibles
+                  </label>
                   <div className="flex gap-2 mb-2">
                     <Input
                       value={newColor}
                       onChange={(e) => setNewColor(e.target.value)}
-                      placeholder="Ex: Rouge, Bleu, Noir"
-                      className="bg-black/50 border-gold/20"
+                      placeholder="Ajouter une couleur"
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
                     />
-                    <Button type="button" onClick={addColor} variant="outline" className="border-gold/20">
+                    <Button type="button" onClick={addColor} className="btn-gold">
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {colors.map((color) => (
-                      <span key={color} className="bg-gold/20 text-gold px-2 py-1 rounded-md text-sm flex items-center">
+                      <Badge key={color} variant="secondary" className="flex items-center gap-1">
                         {color}
-                        <button type="button" onClick={() => removeColor(color)} className="ml-2 text-red-500">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
+                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeColor(color)} />
+                      </Badge>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_featured"
-                    name="is_featured"
-                    checked={formData.is_featured}
-                    onChange={handleInputChange}
-                    className="rounded border-gold/20"
-                  />
-                  <Label htmlFor="is_featured">Produit vedette</Label>
+                {/* Switches */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">
+                      Produit vedette
+                    </label>
+                    <Switch
+                      checked={formData.is_featured}
+                      onCheckedChange={(checked) => handleInputChange('is_featured', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white">
+                      Produit actif
+                    </label>
+                    <Switch
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => handleInputChange('is_active', checked)}
+                    />
+                  </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full btn-gold">
-                  {loading ? "Ajout en cours..." : "Ajouter le produit"}
-                </Button>
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate('/seller-space')}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 btn-gold"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Ajout en cours..." : "Ajouter le produit"}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
