@@ -68,4 +68,4 @@ const LanguageSelector = () => {
   );
 };
 
-export default LanguageSelector; 
+export default LanguageSelector;

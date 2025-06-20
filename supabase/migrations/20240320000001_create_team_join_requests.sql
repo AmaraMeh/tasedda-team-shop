@@ -1,3 +1,4 @@
+
 -- Création de la table team_join_requests
 CREATE TABLE IF NOT EXISTS team_join_requests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -36,4 +37,4 @@ CREATE POLICY "Admins can do everything"
             WHERE profiles.id = auth.uid()
             AND profiles.is_admin = true
         )
-    ); 
+    );
