@@ -121,7 +121,16 @@
     "event": "حدث",
     "sales": "مبيعات",
     "eventDate": "تاريخ الحدث",
-    "eventLocation": "مكان الحدث"
+    "eventLocation": "مكان الحدث",
+    "panel": "لوحة الإدارة",
+    "dashboard": "لوحة القيادة",
+    "orders": "الطلبات",
+    "users": "المستخدمون",
+    "teamMembers": "أعضاء الفريق",
+    "sellers": "البائعون",
+    "withdrawals": "عمليات السحب",
+    "primes": "المكافآت",
+    "chat": "الرسائل"
   },
   "products": {
     "title": "المنتجات",
@@ -141,6 +150,9 @@
     "checkout": "الدفع",
     "continue": "متابعة التسوق",
     "remove": "إزالة",
-    "quantity": "الكمية"
+    "quantity": "الكمية",
+    "promoCode": "كود الخصم",
+    "applyPromo": "تطبيق الكود",
+    "discount": "خصم"
   }
 }

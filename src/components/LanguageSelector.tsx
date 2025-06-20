@@ -1,3 +1,4 @@
+
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Globe } from 'lucide-react';
@@ -13,11 +14,17 @@ const LanguageSelector = () => {
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
+    localStorage.setItem('i18nextLng', lng);
+    // Force direction change
     document.documentElement.dir = lng === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lng;
+    // Force page reload to apply all changes
+    window.location.reload();
   };
 
   const getCurrentLanguage = () => {
-    switch (i18n.language) {
+    const currentLang = i18n.language || 'fr';
+    switch (currentLang) {
       case 'fr':
         return 'FR';
       case 'en':

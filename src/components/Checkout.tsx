@@ -40,7 +40,7 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
       
       const orderData = {
         order_number: orderNumber,
-        user_id: user?.id || null,
+        user_id: user?.id || null, // Allow null for guest orders
         total_amount: getCartTotal(),
         discount_amount: discount,
         promo_code: promoCode,
@@ -56,13 +56,18 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
         }
       };
 
+      console.log('Creating order with data:', orderData);
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([orderData])
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order creation error:', orderError);
+        throw orderError;
+      }
 
       // Insert order items
       const orderItems = items.map(item => ({
@@ -78,7 +83,10 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Order items error:', itemsError);
+        throw itemsError;
+      }
 
       // If promo code was used, create commission for team member
       if (promoCode) {
@@ -112,9 +120,10 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
       clearCart();
       onClose();
     } catch (error: any) {
+      console.error('Checkout error:', error);
       toast({
         title: "Erreur",
-        description: error.message,
+        description: error.message || "Une erreur est survenue lors de la création de la commande",
         variant: "destructive",
       });
     } finally {

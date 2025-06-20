@@ -240,7 +240,7 @@ export type Database = {
           total_amount: number
           tracking_number: string | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -255,7 +255,7 @@ export type Database = {
           total_amount: number
           tracking_number?: string | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -270,7 +270,7 @@ export type Database = {
           total_amount?: number
           tracking_number?: string | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
