@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Plus, X } from 'lucide-react';
+import ImageUpload from '@/components/ImageUpload';
 
 const AddProduct = () => {
   const { user, loading } = useAuth();
@@ -286,10 +286,9 @@ const AddProduct = () => {
                   <label className="block text-sm font-medium text-white mb-2">
                     URL de l'image
                   </label>
-                  <Input
+                  <ImageUpload
                     value={formData.image_url}
-                    onChange={(e) => handleInputChange('image_url', e.target.value)}
-                    placeholder="https://exemple.com/image.jpg"
+                    onChange={(value) => handleInputChange('image_url', value)}
                   />
                 </div>
 

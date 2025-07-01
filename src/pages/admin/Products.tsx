@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit, Trash2, Package, Search } from 'lucide-react';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Product {
   id: string;
@@ -231,130 +231,135 @@ const Products = () => {
               Nouveau Produit
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass-effect border-gold/20 max-w-2xl">
+          <DialogContent className="glass-effect border-gold/20 max-w-2xl px-2 sm:px-6">
             <DialogHeader>
               <DialogTitle>
                 {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="max-h-[60vh] overflow-y-auto pb-32 sm:pb-0">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nom du produit *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="bg-black/50 border-gold/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Catégorie</Label>
+                    <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
+                      <SelectTrigger className="bg-black/50 border-gold/20">
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nom du produit *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="bg-black/50 border-gold/20"
+                    rows={3}
                   />
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Prix (DA) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      required
+                      className="bg-black/50 border-gold/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="original_price">Prix original (DA)</Label>
+                    <Input
+                      id="original_price"
+                      type="number"
+                      value={formData.original_price}
+                      onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                      className="bg-black/50 border-gold/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="stock_quantity">Stock *</Label>
+                    <Input
+                      id="stock_quantity"
+                      type="number"
+                      value={formData.stock_quantity}
+                      onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                      required
+                      className="bg-black/50 border-gold/20"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="category">Catégorie</Label>
-                  <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                    <SelectTrigger className="bg-black/50 border-gold/20">
-                      <SelectValue placeholder="Sélectionner une catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="bg-black/50 border-gold/20"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Prix (DA) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    required
-                    className="bg-black/50 border-gold/20"
+                  <Label htmlFor="image_url">URL de l'image</Label>
+                  <ImageUpload
+                    value={formData.image_url}
+                    onChange={(value) => setFormData({ ...formData, image_url: value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="original_price">Prix original (DA)</Label>
-                  <Input
-                    id="original_price"
-                    type="number"
-                    value={formData.original_price}
-                    onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                    className="bg-black/50 border-gold/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stock_quantity">Stock *</Label>
-                  <Input
-                    id="stock_quantity"
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                    required
-                    className="bg-black/50 border-gold/20"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="image_url">URL de l'image</Label>
-                <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  className="bg-black/50 border-gold/20"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                  <Label htmlFor="is_active">Produit actif</Label>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_active"
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                    />
+                    <Label htmlFor="is_active">Produit actif</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="is_featured"
+                      checked={formData.is_featured}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
+                    />
+                    <Label htmlFor="is_featured">Produit vedette</Label>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is_featured"
-                    checked={formData.is_featured}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
-                  />
-                  <Label htmlFor="is_featured">Produit vedette</Label>
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Annuler
-                </Button>
-                <Button type="submit" className="btn-gold">
-                  {editingProduct ? 'Mettre à jour' : 'Créer'}
-                </Button>
-              </div>
-            </form>
+                <div className="h-2" />
+              </form>
+            </div>
+            <div className="sticky bottom-0 left-0 w-full bg-black/90 z-10 flex flex-col gap-2 p-4 sm:static sm:bg-transparent sm:flex-row sm:justify-end sm:gap-3 sm:p-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                className="w-full sm:w-auto py-3 text-lg sm:text-base"
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                className="btn-gold w-full sm:w-auto py-3 text-lg sm:text-base"
+                form=""
+              >
+                {editingProduct ? 'Mettre à jour' : 'Publier produit'}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
