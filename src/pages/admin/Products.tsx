@@ -238,7 +238,7 @@ const Products = () => {
               </DialogTitle>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto pb-32 sm:pb-0">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom du produit *</Label>
@@ -339,23 +339,28 @@ const Products = () => {
                     <Label htmlFor="is_featured">Produit vedette</Label>
                   </div>
                 </div>
-
-                <div className="h-2" />
               </form>
             </div>
-            <div className="sticky bottom-0 left-0 w-full bg-black/90 z-10 flex flex-col gap-2 p-4 sm:static sm:bg-transparent sm:flex-row sm:justify-end sm:gap-3 sm:p-0">
+            <div
+              className="
+                fixed bottom-0 left-0 w-full z-50
+                bg-black/95 shadow-lg rounded-t-xl border-t border-gold/20
+                flex flex-col gap-3 p-4
+                sm:static sm:bg-transparent sm:shadow-none sm:rounded-none sm:border-none sm:flex-row sm:justify-end sm:gap-3 sm:p-0
+              "
+            >
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsDialogOpen(false)}
-                className="w-full sm:w-auto py-3 text-lg sm:text-base"
+                className="w-full sm:w-auto py-4 text-lg sm:text-base font-medium"
               >
                 Annuler
               </Button>
               <Button
                 type="submit"
-                className="btn-gold w-full sm:w-auto py-3 text-lg sm:text-base"
-                form=""
+                form="product-form"
+                className="btn-gold w-full sm:w-auto py-4 text-lg sm:text-base font-bold shadow-lg"
               >
                 {editingProduct ? 'Mettre à jour' : 'Publier produit'}
               </Button>
