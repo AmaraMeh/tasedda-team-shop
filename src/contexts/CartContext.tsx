@@ -23,6 +23,8 @@ interface CartContextType {
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
+  getCartTotal: () => number;
+  getCartCount: () => number;
   applyPromoCode: (code: string) => Promise<{ success: boolean; message: string }>;
   promoCode: string | null;
   discount: number;
@@ -154,6 +156,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return items.reduce((count, item) => count + item.quantity, 0);
   };
 
+  // Alias functions for backward compatibility
+  const getCartTotal = () => getTotal();
+  const getCartCount = () => getItemCount();
+
   const applyPromoCode = async (code: string): Promise<{ success: boolean; message: string }> => {
     try {
       // Check if it's a team member promo code
@@ -198,6 +204,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearCart,
     getTotal,
     getItemCount,
+    getCartTotal,
+    getCartCount,
     applyPromoCode,
     promoCode,
     discount

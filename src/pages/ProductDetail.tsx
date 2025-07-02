@@ -92,16 +92,27 @@ const ProductDetail = () => {
       return;
     }
 
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image_url: product.image_url,
-        size: selectedSize,
-        color: selectedColor,
-      });
-    }
+    // Create a proper Product object for the cart
+    const cartProduct = {
+      id: product.id,
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      original_price: product.original_price,
+      image_url: product.image_url,
+      images: product.images,
+      stock_quantity: product.stock_quantity,
+      is_active: product.is_active,
+      sizes: product.sizes,
+      colors: product.colors,
+      category_id: null,
+      seller_id: null,
+      is_featured: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    addToCart(cartProduct, quantity, selectedSize, selectedColor);
 
     toast({
       title: 'Produit ajouté !',
@@ -311,6 +322,18 @@ const ProductDetail = () => {
               </div>
             </div>
 
+            {/* Shipping Info */}
+            <div className="bg-gold/10 border border-gold/20 rounded-lg p-4">
+              <div className="flex items-center mb-2">
+                <Truck className="h-5 w-5 text-gold mr-2" />
+                <span className="font-semibold text-gold">Informations de livraison</span>
+              </div>
+              <p className="text-sm text-white/80">
+                Les frais de livraison varient selon la wilaya et le type de livraison choisi.
+                Les tarifs seront calculés automatiquement lors de la commande.
+              </p>
+            </div>
+
             {/* Actions */}
             <div className="space-y-4">
               <Button
@@ -328,7 +351,7 @@ const ProductDetail = () => {
               <Card className="glass-effect border-gold/20">
                 <CardContent className="p-4 text-center">
                   <Truck className="h-8 w-8 mx-auto mb-2 text-gold" />
-                  <p className="text-sm text-white font-medium">Livraison gratuite</p>
+                  <p className="text-sm text-white font-medium">Livraison rapide</p>
                   <p className="text-xs text-muted-foreground">Partout en Algérie</p>
                 </CardContent>
               </Card>
