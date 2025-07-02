@@ -29,17 +29,25 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
     setLoading(true);
 
     try {
-      // Vérifier d'abord si le code est un code promo de team member
+      console.log('Checking code:', code.toUpperCase(), 'for type:', type);
+
+      // Vérifier d'abord si le code est un code promo de team member (seulement pour type 'team')
       if (type === 'team') {
-        const { data: teamMember } = await supabase
+        const { data: teamMember, error: teamError } = await supabase
           .from('team_members')
           .select('*')
           .eq('promo_code', code.toUpperCase())
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
 
-        if (teamMember) {
+        console.log('Team member check result:', { teamMember, teamError });
+
+        if (teamMember && !teamError) {
           // Code promo valide trouvé
+          toast({
+            title: "Code valide",
+            description: `Code promo ${code.toUpperCase()} accepté`,
+          });
           onSuccess();
           onClose();
           setCode('');
@@ -49,15 +57,17 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
       }
 
       // Sinon, vérifier les codes d'invitation classiques
-      const { data: invitation, error } = await supabase
+      const { data: invitation, error: inviteError } = await supabase
         .from('invitation_codes')
         .select('*')
         .eq('code', code.toUpperCase())
         .eq('type', type)
         .eq('is_used', false)
-        .single();
+        .maybeSingle();
 
-      if (error || !invitation) {
+      console.log('Invitation code check result:', { invitation, inviteError });
+
+      if (!invitation || inviteError) {
         toast({
           title: "Code invalide",
           description: "Ce code d'invitation n'existe pas ou a déjà été utilisé",
@@ -68,15 +78,29 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
       }
 
       // Marquer le code comme utilisé
-      await supabase
+      const { error: updateError } = await supabase
         .from('invitation_codes')
-        .update({ is_used: true, used_at: new Date().toISOString() })
+        .update({ 
+          is_used: true, 
+          used_at: new Date().toISOString(),
+          used_by: (await supabase.auth.getUser()).data.user?.id || null
+        })
         .eq('id', invitation.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast({
+        title: "Code accepté",
+        description: `Code d'invitation ${code.toUpperCase()} validé avec succès`,
+      });
 
       onSuccess();
       onClose();
       setCode('');
     } catch (error: any) {
+      console.error('Invitation code error:', error);
       toast({
         title: "Erreur",
         description: error.message,
@@ -98,7 +122,7 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="code">
+            <Label htmlFor="code" className="text-white">
               Code d'invitation {type === 'team' ? 'pour rejoindre la team (ou code promo d\'un membre)' : 'pour devenir vendeur'}
             </Label>
             <Input
@@ -107,11 +131,11 @@ const InvitationCodeModal: React.FC<InvitationCodeModalProps> = ({
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="Entrez votre code d'invitation"
               required
-              className="bg-black/50 border-gold/20"
+              className="bg-black/50 border-gold/20 text-white placeholder:text-gray-400"
             />
             {type === 'team' && (
               <p className="text-xs text-muted-foreground">
-                Vous pouvez utiliser un code d'invitation classique ou le code promo d'un membre actif de l'équipe.
+                Vous pouvez utiliser un code d'invitation classique (ex: TEAM2025) ou le code promo d'un membre actif de l'équipe (ex: LION123).
               </p>
             )}
           </div>

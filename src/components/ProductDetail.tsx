@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, ShoppingBag, Heart, Share2 } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Heart, Share2, Truck } from 'lucide-react';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
 
@@ -215,6 +215,18 @@ const ProductDetail = () => {
               {product.description && (
                 <p className="text-muted-foreground mb-6 leading-relaxed">{product.description}</p>
               )}
+
+              {/* Shipping Info */}
+              <div className="bg-gold/10 border border-gold/20 rounded-lg p-4 mb-6">
+                <div className="flex items-center mb-2">
+                  <Truck className="h-5 w-5 text-gold mr-2" />
+                  <span className="font-semibold text-gold">Informations de livraison</span>
+                </div>
+                <p className="text-sm text-white/80">
+                  Les frais de livraison varient selon la wilaya et le type de livraison choisi.
+                  Les tarifs seront calculés automatiquement lors de la commande.
+                </p>
+              </div>
             </Card>
 
             {/* Size Selection */}

@@ -6,22 +6,23 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface CartItem {
   id: string;
-  product: Product;
+  name: string;
+  price: number;
+  image_url: string;
   quantity: number;
   size?: string;
   color?: string;
+  product: Product;
 }
 
 interface CartContextType {
   items: CartItem[];
   addToCart: (product: Product, quantity?: number, size?: string, color?: string) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string, size?: string, color?: string) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
   clearCart: () => void;
-  getTotalPrice: () => number;
+  getTotal: () => number;
   getItemCount: () => number;
-  getCartTotal: () => number;
-  getCartCount: () => number;
   applyPromoCode: (code: string) => Promise<{ success: boolean; message: string }>;
   promoCode: string | null;
   discount: number;
@@ -78,11 +79,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Adding to cart:', { product, quantity, size, color });
     
     setItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(
-        item => item.product.id === product.id && 
-                item.size === size && 
-                item.color === color
-      );
+      const itemKey = `${product.id}-${size || ''}-${color || ''}`;
+      const existingItemIndex = prevItems.findIndex(item => item.id === itemKey);
 
       if (existingItemIndex >= 0) {
         // Update existing item
@@ -92,11 +90,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Add new item
         const newItem: CartItem = {
-          id: `${product.id}-${size || ''}-${color || ''}`,
-          product,
+          id: itemKey,
+          name: product.name,
+          price: product.price,
+          image_url: product.image_url || '/placeholder.svg',
           quantity,
           size,
-          color
+          color,
+          product
         };
         return [...prevItems, newItem];
       }
@@ -108,23 +109,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    setItems(prevItems => prevItems.filter(item => item.id !== productId));
+  const removeFromCart = (productId: string, size?: string, color?: string) => {
+    const itemKey = `${productId}-${size || ''}-${color || ''}`;
+    setItems(prevItems => prevItems.filter(item => item.id !== itemKey));
     toast({
       title: "Produit retiré",
       description: "Le produit a été retiré du panier",
     });
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number, size?: string, color?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, size, color);
       return;
     }
 
+    const itemKey = `${productId}-${size || ''}-${color || ''}`;
     setItems(prevItems =>
       prevItems.map(item =>
-        item.id === productId ? { ...item, quantity } : item
+        item.id === itemKey ? { ...item, quantity } : item
       )
     );
   };
@@ -142,18 +145,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const getTotalPrice = () => {
-    const subtotal = items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+  const getTotal = () => {
+    const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
     return subtotal - discount;
   };
 
   const getItemCount = () => {
     return items.reduce((count, item) => count + item.quantity, 0);
   };
-
-  // Alias methods for compatibility
-  const getCartTotal = () => getTotalPrice();
-  const getCartCount = () => getItemCount();
 
   const applyPromoCode = async (code: string): Promise<{ success: boolean; message: string }> => {
     try {
@@ -166,7 +165,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (teamMember) {
-        const subtotal = items.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+        const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
         const discountAmount = Math.round(subtotal * 0.05); // 5% discount
         
         setPromoCode(code.toUpperCase());
@@ -197,10 +196,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removeFromCart,
     updateQuantity,
     clearCart,
-    getTotalPrice,
+    getTotal,
     getItemCount,
-    getCartTotal,
-    getCartCount,
     applyPromoCode,
     promoCode,
     discount

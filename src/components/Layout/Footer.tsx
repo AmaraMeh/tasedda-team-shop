@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Package, Users, Heart, Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <footer className="bg-black/90 border-t border-gold/20 py-12">
@@ -19,7 +19,10 @@ const Footer = () => {
               <span className="text-xl font-bold gold-text">LION DZ</span>
             </Link>
             <p className="text-muted-foreground mb-4 leading-relaxed">
-              وجهتك الأولى للأزياء الراقية في الجزائر. اكتشف ملابس عالية الجودة مع نظام العضوية الفريد لدينا ومتاجر الشركاء المحليين.
+              {i18n.language === 'ar' 
+                ? 'وجهتك الأولى للأزياء الراقية في الجزائر. اكتشف ملابس عالية الجودة مع نظام العضوية الفريد لدينا ومتاجر الشركاء المحليين.'
+                : 'Votre destination pour la mode de qualité en Algérie. Découvrez des vêtements haut de gamme avec notre système d\'adhésion unique et nos partenaires locaux.'
+              }
             </p>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -35,26 +38,28 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold text-white mb-4">{t('footer.shop')}</h3>
+            <h3 className="font-semibold text-white mb-4">
+              {i18n.language === 'ar' ? 'المتجر' : 'Boutique'}
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/products" className="text-muted-foreground hover:text-gold transition-colors">
-                  المنتجات
+                  {i18n.language === 'ar' ? 'المنتجات' : 'Produits'}
                 </Link>
               </li>
               <li>
                 <Link to="/local-sellers" className="text-muted-foreground hover:text-gold transition-colors">
-                  البائعون المحليون
+                  {i18n.language === 'ar' ? 'البائعون المحليون' : 'Vendeurs locaux'}
                 </Link>
               </li>
               <li>
                 <Link to="/wholesalers" className="text-muted-foreground hover:text-gold transition-colors">
-                  تجار الجملة
+                  {i18n.language === 'ar' ? 'تجار الجملة' : 'Grossistes'}
                 </Link>
               </li>
               <li>
                 <Link to="/seller" className="text-muted-foreground hover:text-gold transition-colors">
-                  كن بائعاً
+                  {i18n.language === 'ar' ? 'كن بائعاً' : 'Devenir vendeur'}
                 </Link>
               </li>
             </ul>
@@ -62,26 +67,28 @@ const Footer = () => {
 
           {/* Team & Support */}
           <div>
-            <h3 className="font-semibold text-white mb-4">{t('footer.team')}</h3>
+            <h3 className="font-semibold text-white mb-4">
+              {i18n.language === 'ar' ? 'فريق ليون' : 'Team Lion'}
+            </h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/team" className="text-muted-foreground hover:text-gold transition-colors">
-                  انضم للفريق
+                  {i18n.language === 'ar' ? 'انضم للفريق' : 'Rejoindre l\'équipe'}
                 </Link>
               </li>
               <li>
                 <Link to="/profile" className="text-muted-foreground hover:text-gold transition-colors">
-                  الملف الشخصي
+                  {i18n.language === 'ar' ? 'الملف الشخصي' : 'Profil'}
                 </Link>
               </li>
               <li>
                 <Link to="/cart" className="text-muted-foreground hover:text-gold transition-colors">
-                  سلة التسوق
+                  {i18n.language === 'ar' ? 'سلة التسوق' : 'Panier'}
                 </Link>
               </li>
               <li>
                 <Link to="/auth" className="text-muted-foreground hover:text-gold transition-colors">
-                  تسجيل الدخول
+                  {i18n.language === 'ar' ? 'تسجيل الدخول' : 'Connexion'}
                 </Link>
               </li>
             </ul>
@@ -92,17 +99,24 @@ const Footer = () => {
         <div className="border-t border-gold/20 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-              {t('footer.copyright')}
+              {i18n.language === 'ar' 
+                ? '© 2024 ليون دي زد. جميع الحقوق محفوظة.'
+                : '© 2024 Lion DZ. Tous droits réservés.'
+              }
             </p>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>الجزائر</span>
+                <span>{i18n.language === 'ar' ? 'الجزائر' : 'Algérie'}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm">
-                <span className="text-muted-foreground">صُنع بـ</span>
+                <span className="text-muted-foreground">
+                  {i18n.language === 'ar' ? 'صُنع بـ' : 'Fait avec'}
+                </span>
                 <Heart className="h-4 w-4 text-red-500" />
-                <span className="text-muted-foreground">في الجزائر</span>
+                <span className="text-muted-foreground">
+                  {i18n.language === 'ar' ? 'في الجزائر' : 'en Algérie'}
+                </span>
               </div>
             </div>
           </div>

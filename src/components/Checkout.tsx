@@ -5,12 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, CreditCard, Truck } from 'lucide-react';
+import { Minus, Plus, Trash2, CreditCard, Truck, Home, Building } from 'lucide-react';
+import { getShippingCost, getAvailableDeliveryTypes, SHIPPING_RATES } from '@/services/shippingService';
+
+const wilayas = Object.keys(SHIPPING_RATES);
 
 const Checkout = () => {
   const { items, updateQuantity, removeFromCart, clearCart, getTotal } = useCart();
@@ -19,20 +23,39 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [deliveryType, setDeliveryType] = useState<'home' | 'office'>('home');
+  const [shippingCost, setShippingCost] = useState(0);
   
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
     address: '',
     city: '',
-    wilaya: '',
-    promo_code: ''
+    wilaya: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleWilayaChange = (wilaya: string) => {
+    setFormData(prev => ({ ...prev, wilaya }));
+    const availableTypes = getAvailableDeliveryTypes(wilaya);
+    if (!availableTypes.includes(deliveryType)) {
+      setDeliveryType(availableTypes[0]);
+    }
+    setShippingCost(getShippingCost(wilaya, deliveryType));
+  };
+
+  const handleDeliveryTypeChange = (type: 'home' | 'office') => {
+    setDeliveryType(type);
+    if (formData.wilaya) {
+      setShippingCost(getShippingCost(formData.wilaya, type));
+    }
+  };
+
+  const getTotalWithShipping = () => getTotal() + shippingCost;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,24 +66,22 @@ const Checkout = () => {
       // Generate order number
       const orderNumber = `ORD-${Date.now()}`;
       
-      // Calculate total
-      const totalAmount = getTotal();
-      
       // Create order
       const orderData = {
         order_number: orderNumber,
         user_id: user?.id || null,
-        total_amount: totalAmount,
+        total_amount: getTotalWithShipping(),
         payment_method: paymentMethod,
         payment_status: 'pending',
         order_status: 'pending',
-        promo_code: formData.promo_code || null,
         shipping_address: {
           full_name: formData.full_name,
           phone: formData.phone,
           address: formData.address,
           city: formData.city,
-          wilaya: formData.wilaya
+          wilaya: formData.wilaya,
+          delivery_type: deliveryType,
+          shipping_cost: shippingCost
         }
       };
 
@@ -75,7 +96,7 @@ const Checkout = () => {
       // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
-        product_id: item.id,
+        product_id: item.product.id,
         quantity: item.quantity,
         price: item.price,
         size: item.size || null,
@@ -138,7 +159,7 @@ const Checkout = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {items.map((item) => (
-                <div key={`${item.id}-${item.size}-${item.color}`} className="flex items-center space-x-4 p-4 rounded-lg bg-black/30">
+                <div key={item.id} className="flex items-center space-x-4 p-4 rounded-lg bg-black/30">
                   <img
                     src={item.image_url || '/placeholder.jpg'}
                     alt={item.name}
@@ -154,7 +175,7 @@ const Checkout = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color)}
+                      onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.size, item.color)}
                       className="w-8 h-8 p-0 border-gold/20"
                     >
                       <Minus className="h-4 w-4" />
@@ -163,7 +184,7 @@ const Checkout = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color)}
+                      onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.size, item.color)}
                       className="w-8 h-8 p-0 border-gold/20"
                     >
                       <Plus className="h-4 w-4" />
@@ -171,7 +192,7 @@ const Checkout = () => {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => removeFromCart(item.id, item.size, item.color)}
+                      onClick={() => removeFromCart(item.product.id, item.size, item.color)}
                       className="w-8 h-8 p-0 ml-2"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -180,10 +201,20 @@ const Checkout = () => {
                 </div>
               ))}
               
-              <div className="border-t border-gold/20 pt-4">
+              <div className="border-t border-gold/20 pt-4 space-y-2">
+                <div className="flex justify-between text-sm text-white">
+                  <span>Sous-total:</span>
+                  <span>{getTotal().toLocaleString()} DA</span>
+                </div>
+                {shippingCost > 0 && (
+                  <div className="flex justify-between text-sm text-white">
+                    <span>Livraison:</span>
+                    <span>{shippingCost.toLocaleString()} DA</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-lg font-semibold text-white">
                   <span>Total:</span>
-                  <span className="text-gold">{getTotal().toLocaleString()} DA</span>
+                  <span className="text-gold">{getTotalWithShipping().toLocaleString()} DA</span>
                 </div>
               </div>
             </CardContent>
@@ -195,7 +226,7 @@ const Checkout = () => {
               <CardTitle className="text-white">Informations de livraison</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="full_name" className="text-white">Nom complet *</Label>
@@ -205,7 +236,7 @@ const Checkout = () => {
                       value={formData.full_name}
                       onChange={handleInputChange}
                       required
-                      className="bg-black/50 border-gold/20 text-white"
+                      className="bg-black/50 border-gold/20 text-white placeholder:text-gray-400"
                       placeholder="Votre nom complet"
                     />
                   </div>
@@ -218,24 +249,53 @@ const Checkout = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       required
-                      className="bg-black/50 border-gold/20 text-white"
+                      className="bg-black/50 border-gold/20 text-white placeholder:text-gray-400"
                       placeholder="0X XX XX XX XX"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="text-white">Adresse complète *</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    className="bg-black/50 border-gold/20 text-white"
-                    placeholder="Rue, quartier, numéro..."
-                  />
+                  <Label htmlFor="wilaya" className="text-white">Wilaya *</Label>
+                  <Select value={formData.wilaya} onValueChange={handleWilayaChange}>
+                    <SelectTrigger className="bg-black/50 border-gold/20 text-white">
+                      <SelectValue placeholder="Sélectionner la wilaya" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black border-gold/20">
+                      {wilayas.map((wilaya) => (
+                        <SelectItem key={wilaya} value={wilaya} className="text-white hover:bg-gold/10">
+                          {wilaya}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {formData.wilaya && (
+                  <div className="space-y-2">
+                    <Label className="text-white">Type de livraison *</Label>
+                    <RadioGroup value={deliveryType} onValueChange={handleDeliveryTypeChange}>
+                      {getAvailableDeliveryTypes(formData.wilaya).map((type) => (
+                        <div key={type} className="flex items-center space-x-2 p-3 rounded-lg bg-black/30">
+                          <RadioGroupItem value={type} id={type} />
+                          <Label htmlFor={type} className="flex items-center cursor-pointer text-white">
+                            {type === 'home' ? (
+                              <>
+                                <Home className="w-4 h-4 mr-2 text-gold" />
+                                À domicile ({getShippingCost(formData.wilaya, 'home').toLocaleString()} DA)
+                              </>
+                            ) : (
+                              <>
+                                <Building className="w-4 h-4 mr-2 text-gold" />
+                                Au bureau ({getShippingCost(formData.wilaya, 'office').toLocaleString()} DA)
+                              </>
+                            )}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -246,34 +306,22 @@ const Checkout = () => {
                       value={formData.city}
                       onChange={handleInputChange}
                       required
-                      className="bg-black/50 border-gold/20 text-white"
+                      className="bg-black/50 border-gold/20 text-white placeholder:text-gray-400"
                       placeholder="Votre ville"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="wilaya" className="text-white">Wilaya *</Label>
+                    <Label htmlFor="address" className="text-white">Adresse *</Label>
                     <Input
-                      id="wilaya"
-                      name="wilaya"
-                      value={formData.wilaya}
+                      id="address"
+                      name="address"
+                      value={formData.address}
                       onChange={handleInputChange}
                       required
-                      className="bg-black/50 border-gold/20 text-white"
-                      placeholder="Votre wilaya"
+                      className="bg-black/50 border-gold/20 text-white placeholder:text-gray-400"
+                      placeholder="Adresse complète"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="promo_code" className="text-white">Code promo (optionnel)</Label>
-                  <Input
-                    id="promo_code"
-                    name="promo_code"
-                    value={formData.promo_code}
-                    onChange={handleInputChange}
-                    className="bg-black/50 border-gold/20 text-white"
-                    placeholder="Code promo"
-                  />
                 </div>
 
                 <div className="space-y-4">
@@ -297,14 +345,26 @@ const Checkout = () => {
                 </div>
 
                 <div className="border-t border-gold/20 pt-4">
-                  <div className="flex justify-between items-center mb-4 text-lg font-semibold text-white">
-                    <span>Total à payer:</span>
-                    <span className="text-gold">{getTotal().toLocaleString()} DA</span>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm text-white">
+                      <span>Sous-total:</span>
+                      <span>{getTotal().toLocaleString()} DA</span>
+                    </div>
+                    {shippingCost > 0 && (
+                      <div className="flex justify-between text-sm text-white">
+                        <span>Livraison:</span>
+                        <span>{shippingCost.toLocaleString()} DA</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-lg font-semibold text-white">
+                      <span>Total à payer:</span>
+                      <span className="text-gold">{getTotalWithShipping().toLocaleString()} DA</span>
+                    </div>
                   </div>
                   
                   <Button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !formData.wilaya}
                     className="w-full btn-gold text-lg py-3"
                   >
                     {loading ? "Traitement..." : "Confirmer la commande"}
