@@ -18,7 +18,7 @@ i18n
       escapeValue: false,
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage', 'sessionStorage'],
       caches: ['localStorage'],
     },
     resources: {
@@ -34,7 +34,7 @@ i18n.on('languageChanged', (lng) => {
   document.documentElement.lang = lng;
 });
 
-// Initialize with French and LTR direction
+// Force initialize with French and LTR direction
 document.documentElement.dir = 'ltr';
 document.documentElement.lang = 'fr';
 

@@ -1,52 +1,60 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { CreditCard, Truck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Minus, Plus, Trash2, CreditCard, Truck } from 'lucide-react';
 
-interface CheckoutProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
-  const { items, getCartTotal, promoCode, discount, clearCart } = useCart();
+const Checkout = () => {
+  const { items, updateQuantity, removeFromCart, clearCart, getTotal } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
     address: '',
     city: '',
     wilaya: '',
-    payment_method: 'cash_on_delivery'
+    promo_code: ''
   });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (items.length === 0) return;
 
+    setLoading(true);
     try {
       // Generate order number
       const orderNumber = `ORD-${Date.now()}`;
       
+      // Calculate total
+      const totalAmount = getTotal();
+      
+      // Create order
       const orderData = {
         order_number: orderNumber,
-        user_id: user?.id || null, // Allow null for guest orders
-        total_amount: getCartTotal(),
-        discount_amount: discount,
-        promo_code: promoCode,
-        payment_method: formData.payment_method,
+        user_id: user?.id || null,
+        total_amount: totalAmount,
+        payment_method: paymentMethod,
         payment_status: 'pending',
         order_status: 'pending',
+        promo_code: formData.promo_code || null,
         shipping_address: {
           full_name: formData.full_name,
           phone: formData.phone,
@@ -56,74 +64,44 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
         }
       };
 
-      console.log('Creating order with data:', orderData);
-
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert([orderData])
+        .insert(orderData)
         .select()
         .single();
 
-      if (orderError) {
-        console.error('Order creation error:', orderError);
-        throw orderError;
-      }
+      if (orderError) throw orderError;
 
-      // Insert order items
+      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
-        product_id: item.product.id,
+        product_id: item.id,
         quantity: item.quantity,
-        price: item.product.price,
-        size: item.size,
-        color: item.color
+        price: item.price,
+        size: item.size || null,
+        color: item.color || null
       }));
 
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) {
-        console.error('Order items error:', itemsError);
-        throw itemsError;
-      }
+      if (itemsError) throw itemsError;
 
-      // If promo code was used, create commission for team member
-      if (promoCode) {
-        const { data: teamMember } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('promo_code', promoCode)
-          .single();
-
-        if (teamMember) {
-          const commissionRate = teamMember.rank === 1 ? 0.06 :
-                               teamMember.rank === 2 ? 0.08 :
-                               teamMember.rank === 3 ? 0.10 :
-                               teamMember.rank === 4 ? 0.12 : 0.12;
-
-          await supabase.from('commissions').insert({
-            team_member_id: teamMember.id,
-            order_id: order.id,
-            amount: getCartTotal() * commissionRate,
-            percentage: commissionRate,
-            status: 'pending'
-          });
-        }
-      }
-
+      // Clear cart and show success
+      clearCart();
       toast({
-        title: "Commande créée",
-        description: `Votre commande ${orderNumber} a été créée avec succès`,
+        title: "Commande confirmée !",
+        description: `Votre commande ${orderNumber} a été enregistrée avec succès.`,
       });
 
-      clearCart();
-      onClose();
+      // Redirect to success page or orders
+      navigate('/');
     } catch (error: any) {
       console.error('Checkout error:', error);
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur est survenue lors de la création de la commande",
+        description: "Une erreur est survenue lors de la commande. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
@@ -131,130 +109,212 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  if (!isOpen) return null;
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="max-w-md mx-auto text-center">
+          <CardContent className="py-8">
+            <h2 className="text-xl font-semibold mb-4">Panier vide</h2>
+            <p className="text-muted-foreground mb-4">
+              Votre panier est vide. Ajoutez des produits pour continuer.
+            </p>
+            <Button onClick={() => navigate('/products')}>
+              Voir les produits
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto glass-effect border-gold/20">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Finaliser la commande</CardTitle>
-            <Button variant="ghost" onClick={onClose}>×</Button>
-          </div>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Nom complet *</Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                  required
-                  className="bg-black/50 border-gold/20"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Téléphone *</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  required
-                  className="bg-black/50 border-gold/20"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Adresse *</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
-                required
-                className="bg-black/50 border-gold/20"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">Ville *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({...formData, city: e.target.value})}
-                  required
-                  className="bg-black/50 border-gold/20"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="wilaya">Wilaya *</Label>
-                <Input
-                  id="wilaya"
-                  value={formData.wilaya}
-                  onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
-                  required
-                  className="bg-black/50 border-gold/20"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Méthode de paiement</Label>
-              <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
-                <SelectTrigger className="bg-black/50 border-gold/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash_on_delivery">
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4" />
-                      Paiement à la livraison
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="baridimob">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      BaridiMob
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Order Summary */}
-            <div className="border-t border-gold/20 pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Sous-total:</span>
-                <span>{(getCartTotal() + discount).toLocaleString()} DA</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-sm text-green-500">
-                  <span>Réduction ({promoCode}):</span>
-                  <span>-{discount.toLocaleString()} DA</span>
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black py-20">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {/* Cart Summary */}
+          <Card className="glass-effect border-gold/20">
+            <CardHeader>
+              <CardTitle className="text-white">Récapitulatif de la commande</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {items.map((item) => (
+                <div key={`${item.id}-${item.size}-${item.color}`} className="flex items-center space-x-4 p-4 rounded-lg bg-black/30">
+                  <img
+                    src={item.image_url || '/placeholder.jpg'}
+                    alt={item.name}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-medium text-white">{item.name}</h3>
+                    {item.size && <p className="text-sm text-gray-400">Taille: {item.size}</p>}
+                    {item.color && <p className="text-sm text-gray-400">Couleur: {item.color}</p>}
+                    <p className="text-gold font-semibold">{item.price.toLocaleString()} DA</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1, item.size, item.color)}
+                      className="w-8 h-8 p-0 border-gold/20"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-8 text-center text-white">{item.quantity}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1, item.size, item.color)}
+                      className="w-8 h-8 p-0 border-gold/20"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => removeFromCart(item.id, item.size, item.color)}
+                      className="w-8 h-8 p-0 ml-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              )}
-              <div className="flex justify-between font-bold text-lg gold-text">
-                <span>Total:</span>
-                <span>{getCartTotal().toLocaleString()} DA</span>
+              ))}
+              
+              <div className="border-t border-gold/20 pt-4">
+                <div className="flex justify-between items-center text-lg font-semibold text-white">
+                  <span>Total:</span>
+                  <span className="text-gold">{getTotal().toLocaleString()} DA</span>
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-gold"
-            >
-              {loading ? 'Création...' : 'Confirmer la commande'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          {/* Checkout Form */}
+          <Card className="glass-effect border-gold/20">
+            <CardHeader>
+              <CardTitle className="text-white">Informations de livraison</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="full_name" className="text-white">Nom complet *</Label>
+                    <Input
+                      id="full_name"
+                      name="full_name"
+                      value={formData.full_name}
+                      onChange={handleInputChange}
+                      required
+                      className="bg-black/50 border-gold/20 text-white"
+                      placeholder="Votre nom complet"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-white">Téléphone *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      className="bg-black/50 border-gold/20 text-white"
+                      placeholder="0X XX XX XX XX"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-white">Adresse complète *</Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    className="bg-black/50 border-gold/20 text-white"
+                    placeholder="Rue, quartier, numéro..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-white">Ville *</Label>
+                    <Input
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required
+                      className="bg-black/50 border-gold/20 text-white"
+                      placeholder="Votre ville"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="wilaya" className="text-white">Wilaya *</Label>
+                    <Input
+                      id="wilaya"
+                      name="wilaya"
+                      value={formData.wilaya}
+                      onChange={handleInputChange}
+                      required
+                      className="bg-black/50 border-gold/20 text-white"
+                      placeholder="Votre wilaya"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="promo_code" className="text-white">Code promo (optionnel)</Label>
+                  <Input
+                    id="promo_code"
+                    name="promo_code"
+                    value={formData.promo_code}
+                    onChange={handleInputChange}
+                    className="bg-black/50 border-gold/20 text-white"
+                    placeholder="Code promo"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-white">Mode de paiement</Label>
+                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-black/30">
+                      <RadioGroupItem value="cash_on_delivery" id="cash" />
+                      <Label htmlFor="cash" className="flex items-center cursor-pointer text-white">
+                        <Truck className="w-4 h-4 mr-2 text-gold" />
+                        Paiement à la livraison
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-black/30">
+                      <RadioGroupItem value="online_payment" id="online" />
+                      <Label htmlFor="online" className="flex items-center cursor-pointer text-white">
+                        <CreditCard className="w-4 h-4 mr-2 text-gold" />
+                        Paiement en ligne
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="border-t border-gold/20 pt-4">
+                  <div className="flex justify-between items-center mb-4 text-lg font-semibold text-white">
+                    <span>Total à payer:</span>
+                    <span className="text-gold">{getTotal().toLocaleString()} DA</span>
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full btn-gold text-lg py-3"
+                  >
+                    {loading ? "Traitement..." : "Confirmer la commande"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

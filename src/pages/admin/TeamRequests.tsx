@@ -57,7 +57,7 @@ const TeamRequests = () => {
           ...item,
           status: item.status as 'pending' | 'approved' | 'rejected',
           profiles: Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
-        }));
+        })) as TeamRequest[];
         setRequests(mappedRequests);
       }
     } catch (error: any) {
