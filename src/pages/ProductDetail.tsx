@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -92,7 +91,7 @@ const ProductDetail = () => {
       return;
     }
 
-    // Create a proper Product object for the cart
+    // Create a proper Product object for the cart that matches the Product type
     const cartProduct = {
       id: product.id,
       name: product.name,
@@ -109,7 +108,11 @@ const ProductDetail = () => {
       seller_id: null,
       is_featured: false,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      // Add the required properties for the Product type
+      image: product.image_url || '/placeholder.svg',
+      category: product.categories?.name || 'Sans catégorie',
+      inStock: product.stock_quantity > 0
     };
 
     addToCart(cartProduct, quantity, selectedSize, selectedColor);
