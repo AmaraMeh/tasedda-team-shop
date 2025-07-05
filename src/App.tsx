@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +27,8 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminUsers from "./pages/admin/Users";
 import AdminSellers from "./pages/admin/Sellers";
 import AdminTeamMembers from "./pages/admin/TeamMembers";
+import AdminTeamRequests from "./pages/admin/TeamRequests";
+import AdminSellerRequests from "./pages/admin/SellerRequests";
 import AdminHomepage from "./pages/admin/Homepage";
 import AdminChat from "./pages/admin/Chat";
 
@@ -65,6 +66,8 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/sellers" element={<AdminSellers />} />
                 <Route path="/admin/team-members" element={<AdminTeamMembers />} />
+                <Route path="/admin/team-requests" element={<AdminTeamRequests />} />
+                <Route path="/admin/seller-requests" element={<AdminSellerRequests />} />
                 <Route path="/admin/homepage" element={<AdminHomepage />} />
                 <Route path="/admin/chat" element={<AdminChat />} />
               </Routes>

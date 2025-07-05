@@ -1,21 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Package } from 'lucide-react';
 
-interface TeamRequest {
+interface SellerRequest {
   id: string;
   user_id: string;
-  status: 'pending' | 'approved' | 'rejected';
+  business_name: string;
+  seller_type: 'normal' | 'wholesale';
+  status: 'pending' | 'active' | 'suspended';
+  description: string;
   created_at: string;
-  admin_notes: string | null;
-  invited_by: string | null;
   profiles: {
     full_name: string;
     email: string;
@@ -23,11 +21,10 @@ interface TeamRequest {
   } | null;
 }
 
-const TeamRequests = () => {
-  const [requests, setRequests] = useState<TeamRequest[]>([]);
+const SellerRequests = () => {
+  const [requests, setRequests] = useState<SellerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [adminNotes, setAdminNotes] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,15 +34,16 @@ const TeamRequests = () => {
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('team_join_requests')
+        .from('sellers')
         .select(`
           id,
           user_id,
+          business_name,
+          seller_type,
           status,
+          description,
           created_at,
-          admin_notes,
-          invited_by,
-          profiles!team_join_requests_user_id_fkey(full_name, email, phone)
+          profiles(full_name, email, phone)
         `)
         .order('created_at', { ascending: false });
 
@@ -54,13 +52,13 @@ const TeamRequests = () => {
       if (data) {
         const mappedRequests = data.map(item => ({
           ...item,
-          status: item.status as 'pending' | 'approved' | 'rejected',
-          profiles: item.profiles
+          seller_type: item.seller_type as 'normal' | 'wholesale',
+          status: item.status as 'pending' | 'active' | 'suspended'
         }));
         setRequests(mappedRequests);
       }
     } catch (error: any) {
-      console.error('Error fetching team requests:', error);
+      console.error('Error fetching seller requests:', error);
       toast({
         title: "Erreur",
         description: error.message,
@@ -71,47 +69,27 @@ const TeamRequests = () => {
     }
   };
 
-  const handleRequest = async (requestId: string, action: 'approved' | 'rejected') => {
+  const handleRequest = async (requestId: string, action: 'active' | 'suspended') => {
     setProcessingId(requestId);
     
     try {
       const request = requests.find(r => r.id === requestId);
       if (!request) return;
 
-      // Update request status
+      // Update seller status
       const { error: updateError } = await supabase
-        .from('team_join_requests')
+        .from('sellers')
         .update({ 
           status: action,
-          admin_notes: adminNotes[requestId] || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', requestId);
 
       if (updateError) throw updateError;
 
-      // If approved, create team member with generated promo code
-      if (action === 'approved') {
-        const { data: promoCode, error: promoError } = await supabase
-          .rpc('generate_promo_code');
-
-        if (promoError) throw promoError;
-
-        const { error: memberError } = await supabase
-          .from('team_members')
-          .insert({
-            user_id: request.user_id,
-            promo_code: promoCode,
-            invited_by: request.invited_by,
-            is_active: true
-          });
-
-        if (memberError) throw memberError;
-      }
-
       toast({
-        title: action === 'approved' ? "Demande approuvée" : "Demande rejetée",
-        description: `La demande de ${request.profiles?.full_name || 'cet utilisateur'} a été ${action === 'approved' ? 'approuvée' : 'rejetée'}.`,
+        title: action === 'active' ? "Vendeur approuvé" : "Vendeur suspendu",
+        description: `Le vendeur ${request.business_name} a été ${action === 'active' ? 'approuvé' : 'suspendu'}.`,
       });
 
       fetchRequests();
@@ -130,12 +108,23 @@ const TeamRequests = () => {
     switch (status) {
       case 'pending':
         return <Badge variant="secondary">En attente</Badge>;
-      case 'approved':
-        return <Badge className="bg-green-500">Approuvée</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejetée</Badge>;
+      case 'active':
+        return <Badge className="bg-green-500">Approuvé</Badge>;
+      case 'suspended':
+        return <Badge variant="destructive">Suspendu</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getSellerTypeBadge = (type: string) => {
+    switch (type) {
+      case 'normal':
+        return <Badge variant="outline">Vendeur Normal</Badge>;
+      case 'wholesale':
+        return <Badge className="bg-blue-500"><Package className="h-3 w-3 mr-1" />Grossiste</Badge>;
+      default:
+        return <Badge variant="outline">{type}</Badge>;
     }
   };
 
@@ -146,24 +135,28 @@ const TeamRequests = () => {
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold">Demandes d'Adhésion Team</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Demandes de Vendeurs</h1>
         <div className="text-sm text-muted-foreground">
           {requests.filter(r => r.status === 'pending').length} en attente
         </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="space-y-4">
         {requests.map((request) => (
           <Card key={request.id} className="overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-base sm:text-lg">
-                    <span className="truncate">{request.profiles?.full_name || 'Utilisateur inconnu'}</span>
+                    <span className="truncate">{request.business_name}</span>
+                    {getSellerTypeBadge(request.seller_type)}
                     {getStatusBadge(request.status)}
                   </CardTitle>
                   <div className="mt-2 space-y-1">
                     <p className="text-sm text-muted-foreground truncate">
+                      {request.profiles?.full_name || 'Nom non disponible'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
                       {request.profiles?.email || 'Email non disponible'}
                     </p>
                     <p className="text-sm text-muted-foreground">
@@ -174,12 +167,13 @@ const TeamRequests = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                
+                <div className="flex flex-col sm:flex-row gap-2">
                   {request.status === 'pending' && (
                     <>
                       <Button
                         size="sm"
-                        onClick={() => handleRequest(request.id, 'approved')}
+                        onClick={() => handleRequest(request.id, 'active')}
                         disabled={processingId === request.id}
                         className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                       >
@@ -189,7 +183,7 @@ const TeamRequests = () => {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleRequest(request.id, 'rejected')}
+                        onClick={() => handleRequest(request.id, 'suspended')}
                         disabled={processingId === request.id}
                         className="w-full sm:w-auto"
                       >
@@ -198,35 +192,40 @@ const TeamRequests = () => {
                       </Button>
                     </>
                   )}
+                  {request.status === 'active' && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleRequest(request.id, 'suspended')}
+                      disabled={processingId === request.id}
+                      className="w-full sm:w-auto"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Suspendre
+                    </Button>
+                  )}
+                  {request.status === 'suspended' && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleRequest(request.id, 'active')}
+                      disabled={processingId === request.id}
+                      className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Réactiver
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-0">
-              {request.status === 'pending' && (
-                <div className="space-y-2">
-                  <Label htmlFor={`notes-${request.id}`}>Notes administratives</Label>
-                  <Textarea
-                    id={`notes-${request.id}`}
-                    placeholder="Ajouter des notes (optionnel)..."
-                    value={adminNotes[request.id] || ''}
-                    onChange={(e) => setAdminNotes({
-                      ...adminNotes,
-                      [request.id]: e.target.value
-                    })}
-                    className="resize-none"
-                  />
+            
+            <CardContent>
+              <div className="space-y-2">
+                <div>
+                  <span className="font-medium">Description:</span>
+                  <p className="text-sm text-muted-foreground">{request.description}</p>
                 </div>
-              )}
-              
-              {request.admin_notes && (
-                <div className="mt-4 p-3 bg-muted rounded-lg">
-                  <div className="flex items-center mb-2">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    <span className="font-medium">Notes administratives:</span>
-                  </div>
-                  <p className="text-sm break-words">{request.admin_notes}</p>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -235,7 +234,7 @@ const TeamRequests = () => {
       {requests.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">Aucune demande d'adhésion.</p>
+            <p className="text-muted-foreground">Aucune demande de vendeur.</p>
           </CardContent>
         </Card>
       )}
@@ -243,4 +242,4 @@ const TeamRequests = () => {
   );
 };
 
-export default TeamRequests;
+export default SellerRequests; 

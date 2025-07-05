@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,7 +85,9 @@ const Admin = () => {
     { title: 'Produits', icon: Package, path: '/admin/products', description: 'Gérer les produits' },
     { title: 'Commandes', icon: ShoppingCart, path: '/admin/orders', description: 'Gérer les commandes' },
     { title: 'Vendeurs', icon: TrendingUp, path: '/admin/sellers', description: 'Gérer les vendeurs' },
+    { title: 'Demandes Vendeurs', icon: TrendingUp, path: '/admin/seller-requests', description: 'Demandes de vendeurs' },
     { title: 'Équipe', icon: Users, path: '/admin/team-members', description: 'Gérer l\'équipe' },
+    { title: 'Demandes Team', icon: Users, path: '/admin/team-requests', description: 'Demandes d\'équipe' },
     { title: 'Page d\'accueil', icon: Home, path: '/admin/homepage', description: 'Contenu de la page d\'accueil' },
     { title: 'Chat', icon: MessageSquare, path: '/admin/chat', description: 'Chat administrateur' }
   ];
