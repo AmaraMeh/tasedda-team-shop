@@ -50,34 +50,36 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto glass-effect border-gold/20">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
               Panier ({getCartCount()})
             </CardTitle>
-            <Button variant="ghost" onClick={onClose}>×</Button>
+            <Button variant="ghost" onClick={onClose} className="h-8 w-8 p-0">×</Button>
           </div>
         </CardHeader>
         
         <CardContent className="space-y-4">
           {items.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+            <p className="text-center text-muted-foreground py-8 text-sm">
               Votre panier est vide
             </p>
           ) : (
             <>
               {items.map((item) => (
-                <div key={item.id} className="flex gap-3 p-3 border border-gold/20 rounded-lg">
+                <div key={item.id} className="flex gap-2 sm:gap-3 p-2 sm:p-3 border border-gold/20 rounded-lg">
                   <img
                     src={item.product.image_url || '/placeholder.svg'}
                     alt={item.product.name}
-                    className="w-16 h-16 object-cover rounded"
+                    className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
                   />
-                  <div className="flex-1 space-y-2">
-                    <h4 className="font-medium text-sm">{item.product.name}</h4>
-                    {item.size && <Badge variant="outline" className="text-xs">Taille: {item.size}</Badge>}
-                    {item.color && <Badge variant="outline" className="text-xs">Couleur: {item.color}</Badge>}
+                  <div className="flex-1 space-y-1 sm:space-y-2">
+                    <h4 className="font-medium text-xs sm:text-sm">{item.product.name}</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {item.size && <Badge variant="outline" className="text-xs">Taille: {item.size}</Badge>}
+                      {item.color && <Badge variant="outline" className="text-xs">Couleur: {item.color}</Badge>}
+                    </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <Button
                           size="sm"
                           variant="outline"
@@ -86,7 +88,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="text-sm w-8 text-center">{item.quantity}</span>
+                        <span className="text-xs sm:text-sm w-6 sm:w-8 text-center">{item.quantity}</span>
                         <Button
                           size="sm"
                           variant="outline"
@@ -105,7 +107,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="text-sm font-medium gold-text">
+                    <div className="text-xs sm:text-sm font-medium gold-text">
                       {(item.product.price * item.quantity).toLocaleString()} DA
                     </div>
                   </div>
@@ -119,7 +121,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                     placeholder="Code promo Team (ex: ABC123)"
                     value={promoInput}
                     onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                    className="bg-black/50 border-gold/20"
+                    className="bg-black/50 border-gold/20 text-sm"
                     maxLength={6}
                   />
                   <Button
@@ -132,7 +134,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
                   </Button>
                 </div>
                 {promoCode && (
-                  <div className="text-sm text-green-500">
+                  <div className="text-xs sm:text-sm text-green-500">
                     Code promo appliqué: {promoCode} (-{discount.toLocaleString()} DA)
                   </div>
                 )}
@@ -140,17 +142,17 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
               
               {/* Total */}
               <div className="border-t border-gold/20 pt-4 space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span>Sous-total:</span>
                   <span>{(getCartTotal() + discount).toLocaleString()} DA</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-500">
+                  <div className="flex justify-between text-xs sm:text-sm text-green-500">
                     <span>Réduction (5%):</span>
                     <span>-{discount.toLocaleString()} DA</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-lg gold-text">
+                <div className="flex justify-between font-bold text-sm sm:text-lg gold-text">
                   <span>Total:</span>
                   <span>{getCartTotal().toLocaleString()} DA</span>
                 </div>
@@ -158,7 +160,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, onCheckout }) => {
               
               <Button
                 onClick={onCheckout}
-                className="w-full btn-gold"
+                className="w-full btn-gold text-sm sm:text-base"
               >
                 Procéder au paiement
               </Button>

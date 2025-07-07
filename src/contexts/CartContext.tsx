@@ -16,6 +16,7 @@ interface CartContextType {
   items: CartItem[];
   addToCart: (product: Product, quantity?: number, size?: string, color?: string) => void;
   removeFromCart: (productId: string) => void;
+  removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   getTotalPrice: () => number;
@@ -116,6 +117,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const removeItem = (productId: string) => {
+    removeFromCart(productId);
+  };
+
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
@@ -136,10 +141,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('cart');
     localStorage.removeItem('promoCode');
     localStorage.removeItem('discount');
-    toast({
-      title: "Panier vidé",
-      description: "Tous les articles ont été retirés du panier",
-    });
   };
 
   const getTotalPrice = () => {
@@ -195,6 +196,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     items,
     addToCart,
     removeFromCart,
+    removeItem,
     updateQuantity,
     clearCart,
     getTotalPrice,

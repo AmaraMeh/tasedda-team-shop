@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCart } from '@/contexts/CartContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CreditCard, Truck } from 'lucide-react';
@@ -18,7 +17,6 @@ interface CheckoutProps {
 
 const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
   const { items, getCartTotal, promoCode, discount, clearCart } = useCart();
-  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -40,7 +38,7 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
       
       const orderData = {
         order_number: orderNumber,
-        user_id: user?.id || null, // Allow null for guest orders
+        user_id: null, // Allow guest orders
         total_amount: getCartTotal(),
         discount_amount: discount,
         promo_code: promoCode,
@@ -88,33 +86,15 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
         throw itemsError;
       }
 
-      // If promo code was used, create commission for team member
+      // If promo code was used, process commission
       if (promoCode) {
-        const { data: teamMember } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('promo_code', promoCode)
-          .single();
-
-        if (teamMember) {
-          const commissionRate = teamMember.rank === 1 ? 0.06 :
-                               teamMember.rank === 2 ? 0.08 :
-                               teamMember.rank === 3 ? 0.10 :
-                               teamMember.rank === 4 ? 0.12 : 0.12;
-
-          await supabase.from('commissions').insert({
-            team_member_id: teamMember.id,
-            order_id: order.id,
-            amount: getCartTotal() * commissionRate,
-            percentage: commissionRate,
-            status: 'pending'
-          });
-        }
+        const { processOrderCommission } = await import('@/utils/orderUtils');
+        await processOrderCommission(order.id);
       }
 
       toast({
-        title: "Commande créée",
-        description: `Votre commande ${orderNumber} a été créée avec succès`,
+        title: "Commande passée avec succès !",
+        description: `Votre commande ${orderNumber} a été enregistrée. Vous recevrez bientôt un appel de confirmation.`,
       });
 
       clearCart();
@@ -138,76 +118,76 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto glass-effect border-gold/20">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Finaliser la commande</CardTitle>
-            <Button variant="ghost" onClick={onClose}>×</Button>
+            <CardTitle className="text-lg sm:text-xl">Finaliser la commande</CardTitle>
+            <Button variant="ghost" onClick={onClose} className="h-8 w-8 p-0">×</Button>
           </div>
         </CardHeader>
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Nom complet *</Label>
+                <Label htmlFor="full_name" className="text-sm">Nom complet *</Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({...formData, full_name: e.target.value})}
                   required
-                  className="bg-black/50 border-gold/20"
+                  className="bg-black/50 border-gold/20 text-sm"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Téléphone *</Label>
+                <Label htmlFor="phone" className="text-sm">Téléphone *</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   required
-                  className="bg-black/50 border-gold/20"
+                  className="bg-black/50 border-gold/20 text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Adresse *</Label>
+              <Label htmlFor="address" className="text-sm">Adresse *</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
                 required
-                className="bg-black/50 border-gold/20"
+                className="bg-black/50 border-gold/20 text-sm"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">Ville *</Label>
+                <Label htmlFor="city" className="text-sm">Ville *</Label>
                 <Input
                   id="city"
                   value={formData.city}
                   onChange={(e) => setFormData({...formData, city: e.target.value})}
                   required
-                  className="bg-black/50 border-gold/20"
+                  className="bg-black/50 border-gold/20 text-sm"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="wilaya">Wilaya *</Label>
+                <Label htmlFor="wilaya" className="text-sm">Wilaya *</Label>
                 <Input
                   id="wilaya"
                   value={formData.wilaya}
                   onChange={(e) => setFormData({...formData, wilaya: e.target.value})}
                   required
-                  className="bg-black/50 border-gold/20"
+                  className="bg-black/50 border-gold/20 text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Méthode de paiement</Label>
+              <Label className="text-sm">Méthode de paiement</Label>
               <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
-                <SelectTrigger className="bg-black/50 border-gold/20">
+                <SelectTrigger className="bg-black/50 border-gold/20 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -239,7 +219,7 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
                   <span>-{discount.toLocaleString()} DA</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg gold-text">
+              <div className="flex justify-between font-bold text-base sm:text-lg gold-text">
                 <span>Total:</span>
                 <span>{getCartTotal().toLocaleString()} DA</span>
               </div>
@@ -248,7 +228,7 @@ const Checkout: React.FC<CheckoutProps> = ({ isOpen, onClose }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full btn-gold"
+              className="w-full btn-gold text-sm sm:text-base"
             >
               {loading ? 'Création...' : 'Confirmer la commande'}
             </Button>

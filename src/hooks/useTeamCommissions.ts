@@ -36,16 +36,29 @@ export const useTeamCommissions = () => {
 
       if (error) throw error;
 
-      setCommissions(commissionsData || []);
+      // Convertir les données en format Commission
+      const formattedCommissions: Commission[] = (commissionsData || []).map(c => ({
+        id: c.id,
+        team_member_id: c.team_member_id,
+        order_id: c.order_id,
+        amount: c.amount,
+        percentage: c.percentage,
+        status: c.status as 'pending' | 'approved' | 'paid',
+        type: c.type as 'sale' | 'affiliation_bonus',
+        metadata: c.metadata,
+        created_at: c.created_at
+      }));
+
+      setCommissions(formattedCommissions);
 
       // Calculer les montants
-      const pending = commissionsData
-        ?.filter(c => c.status === 'pending')
-        ?.reduce((sum, c) => sum + c.amount, 0) || 0;
+      const pending = formattedCommissions
+        .filter(c => c.status === 'pending')
+        .reduce((sum, c) => sum + c.amount, 0);
 
-      const available = commissionsData
-        ?.filter(c => c.status === 'approved')
-        ?.reduce((sum, c) => sum + c.amount, 0) || 0;
+      const available = formattedCommissions
+        .filter(c => c.status === 'approved')
+        .reduce((sum, c) => sum + c.amount, 0);
 
       setPendingAmount(pending);
       setAvailableAmount(available);

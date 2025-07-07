@@ -90,7 +90,7 @@ export interface TeamMember {
   total_sales: number;
   total_commissions: number;
   available_commissions: number;
-  pending_commissions?: number;
+  pending_commissions: number;
   invited_by: string | null;
   is_active: boolean;
   created_at: string;
