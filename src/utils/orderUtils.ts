@@ -3,16 +3,36 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const processOrderCommission = async (orderId: string) => {
   try {
+    console.log('Processing commission for order:', orderId);
+    
     // Appeler la fonction SQL pour traiter les commissions
-    const { error } = await supabase.rpc('process_team_commission', {
+    const { data, error } = await supabase.rpc('process_team_commission', {
       order_id_param: orderId
     });
 
     if (error) {
       console.error('Error processing commission:', error);
+      throw error;
     }
+
+    console.log('Commission processed successfully:', data);
+    
+    // Vérifier si des commissions ont été créées
+    const { data: commissions, error: commissionError } = await supabase
+      .from('commissions')
+      .select('*')
+      .eq('order_id', orderId);
+
+    if (commissionError) {
+      console.error('Error checking commissions:', commissionError);
+    } else {
+      console.log('Commissions created:', commissions);
+    }
+
+    return { success: true, data };
   } catch (error) {
     console.error('Error calling commission function:', error);
+    return { success: false, error };
   }
 };
 
@@ -44,6 +64,8 @@ export const updateTeamMemberRank = async (teamMemberId: string) => {
 
       if (updateError) {
         console.error('Error updating team member rank:', updateError);
+      } else {
+        console.log(`Team member rank updated to ${newRank}`);
       }
     }
   } catch (error) {
