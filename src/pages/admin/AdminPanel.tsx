@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +14,8 @@ import {
   Home,
   Gift,
   CreditCard,
-  FileText
+  FileText,
+  TrendingUp
 } from 'lucide-react';
 
 const AdminPanel = () => {
@@ -73,6 +73,20 @@ const AdminPanel = () => {
       path: '/admin/sellers'
     },
     {
+      id: 'seller-requests',
+      title: 'Demandes vendeurs',
+      icon: FileText,
+      description: 'Demandes d\'inscription vendeurs',
+      path: '/admin/seller-requests'
+    },
+    {
+      id: 'commissions',
+      title: 'Commissions',
+      icon: TrendingUp,
+      description: 'Gestion des commissions équipe',
+      path: '/admin/commissions'
+    },
+    {
       id: 'withdrawals',
       title: 'Retraits',
       icon: CreditCard,
@@ -85,6 +99,13 @@ const AdminPanel = () => {
       icon: Gift,
       description: 'Gestion des primes et bonus',
       path: '/admin/primes'
+    },
+    {
+      id: 'shipping',
+      title: 'Tarifs livraison',
+      icon: TrendingUp,
+      description: 'Gestion des tarifs de livraison',
+      path: '/admin/shipping-rates'
     },
     {
       id: 'chat',

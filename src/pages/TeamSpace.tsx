@@ -1,329 +1,276 @@
+
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import Header from '@/components/Layout/Header';
-import Footer from '@/components/Layout/Footer';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useTeamCommissions } from '@/hooks/useTeamCommissions';
+import { Copy, Users, TrendingUp, Gift, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Crown, TrendingUp, Gift, Users, Star, Copy, DollarSign, Award } from 'lucide-react';
-import type { User as AuthUser } from '@supabase/supabase-js';
-import { useAuth } from '@/contexts/AuthContext';
 
-interface TeamMember {
+interface TeamMemberData {
   id: string;
   promo_code: string;
   rank: number;
   total_sales: number;
   total_commissions: number;
   available_commissions: number;
+}
+
+interface AffiliatedOrder {
+  id: string;
+  order_number: string;
+  total_amount: number;
   created_at: string;
+  order_status: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  };
 }
 
 const TeamSpace = () => {
-  const { user, loading } = useAuth();
-  const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { commissions, pendingAmount, availableAmount, loading } = useTeamCommissions();
+  const [teamData, setTeamData] = useState<TeamMemberData | null>(null);
+  const [affiliatedOrders, setAffiliatedOrders] = useState<AffiliatedOrder[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-      return;
-    }
     if (user) {
-      loadTeamData(user.id);
+      fetchTeamData();
+      fetchAffiliatedOrders();
     }
-  }, [user, loading, navigate]);
+  }, [user]);
 
-  const loadTeamData = async (userId: string) => {
+  const fetchTeamData = async () => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from('team_members')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      
-      if (!data) {
-        navigate('/team');
-        return;
-      }
-
-      setTeamMember(data);
+      setTeamData(data);
     } catch (error: any) {
-      console.error('Error loading team data:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger vos données",
-        variant: "destructive",
-      });
-    } finally {
-      setDataLoading(false);
+      console.error('Error fetching team data:', error);
+    }
+  };
+
+  const fetchAffiliatedOrders = async () => {
+    if (!user || !teamData) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          created_at,
+          order_status,
+          user_id,
+          profiles(full_name, email)
+        `)
+        .eq('promo_code', teamData.promo_code)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAffiliatedOrders(data || []);
+    } catch (error: any) {
+      console.error('Error fetching affiliated orders:', error);
     }
   };
 
   const copyPromoCode = () => {
-    if (teamMember?.promo_code) {
-      navigator.clipboard.writeText(teamMember.promo_code);
+    if (teamData) {
+      navigator.clipboard.writeText(teamData.promo_code);
       toast({
-        title: "Code copié !",
-        description: "Votre code promo a été copié dans le presse-papier",
+        title: "Code copié",
+        description: "Le code promo a été copié dans le presse-papiers",
       });
     }
   };
 
-  const getRankTitle = (rank: number) => {
+  const getRankInfo = (rank: number) => {
     const ranks = [
-      { level: 1, title: "Ambassadeur", commission: 6 },
-      { level: 2, title: "Ambassadeur Bronze", commission: 8 },
-      { level: 3, title: "Ambassadeur Argent", commission: 10 },
-      { level: 4, title: "Ambassadeur Or", commission: 12 },
-      { level: 5, title: "Manager", commission: 12 },
+      { level: 1, title: "Ambassadeur", commission: 6, icon: "🥉" },
+      { level: 2, title: "Ambassadeur Bronze", commission: 8, icon: "🥈" },
+      { level: 3, title: "Ambassadeur Argent", commission: 10, icon: "🥇" },
+      { level: 4, title: "Ambassadeur Or", commission: 12, icon: "👑" },
+      { level: 5, title: "Manager", commission: 12, icon: "💎" },
     ];
     return ranks.find(r => r.level === rank) || ranks[0];
   };
 
-  const getNextRank = (currentRank: number) => {
-    const salesThresholds = [0, 25, 45, 85, 120];
-    if (currentRank >= 5) return null;
-    return {
-      level: currentRank + 1,
-      salesNeeded: salesThresholds[currentRank]
-    };
-  };
-
-  if (loading || dataLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
+        <p className="text-white">Veuillez vous connecter pour accéder à l'espace équipe.</p>
       </div>
     );
   }
 
-  if (!teamMember) {
+  if (!teamData) {
     return (
-      <div className="min-h-screen bg-black">
-        <Header />
-        <main className="container mx-auto px-4 py-20">
-          <div className="text-center">
-            <Crown className="h-20 w-20 mx-auto mb-6 text-gold" />
-            <h1 className="text-3xl font-display font-bold mb-4">
-              Vous n'êtes pas encore membre de la <span className="gold-text">Team</span>
-            </h1>
-            <Button onClick={() => navigate('/team')} className="btn-gold">
-              Rejoindre la Team
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Card className="glass-effect border-gold/20 max-w-md">
+          <CardContent className="p-8 text-center">
+            <Users className="h-16 w-16 mx-auto text-gold mb-4" />
+            <h2 className="text-xl font-bold text-white mb-4">Rejoindre l'équipe</h2>
+            <p className="text-gray-400 mb-6">
+              Vous n'êtes pas encore membre de notre équipe. 
+              Rejoignez-nous pour commencer à gagner des commissions !
+            </p>
+            <Button onClick={() => window.location.href = '/team'} className="btn-gold">
+              Rejoindre maintenant
             </Button>
-          </div>
-        </main>
-        <Footer />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const currentRank = getRankTitle(teamMember.rank);
-  const nextRank = getNextRank(teamMember.rank);
+  const rankInfo = getRankInfo(teamData.rank);
 
   return (
-    <div className="min-h-screen bg-black">
-      <Header />
-      
-      <main className="py-20">
-        {/* Header */}
-        <section className="container mx-auto px-4 text-center mb-12" data-aos="fade-up">
-          <Crown className="h-16 w-16 mx-auto mb-4 text-gold" />
-          <h1 className="text-4xl font-display font-bold mb-4">
-            Mon Espace <span className="gold-text">Team Tasedda</span>
-          </h1>
-          <p className="text-muted-foreground">
-            Gérez vos commissions et suivez vos performances
-          </p>
-        </section>
-
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Stats principales */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Code promo */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Gift className="h-5 w-5 mr-2 text-gold" />
-                    Mon Code Promo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between p-4 bg-gold/10 rounded-lg border border-gold/20">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-2xl font-bold gold-text">
-                        {teamMember.promo_code}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Commission: {currentRank.commission}%
-                      </div>
-                    </div>
-                    <Button onClick={copyPromoCode} variant="outline" className="border-gold/20">
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copier
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Performances */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="glass-effect border-gold/20" data-aos="fade-up" data-aos-delay="100">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Ventes Totales</p>
-                        <p className="text-2xl font-bold gold-text">{teamMember.total_sales}</p>
-                      </div>
-                      <TrendingUp className="h-8 w-8 text-gold" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="glass-effect border-gold/20" data-aos="fade-up" data-aos-delay="200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Commissions Totales</p>
-                        <p className="text-2xl font-bold text-green-500">
-                          {teamMember.total_commissions.toFixed(2)} DA
-                        </p>
-                      </div>
-                      <DollarSign className="h-8 w-8 text-green-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="glass-effect border-gold/20" data-aos="fade-up" data-aos-delay="300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Disponible</p>
-                        <p className="text-2xl font-bold text-blue-500">
-                          {teamMember.available_commissions.toFixed(2)} DA
-                        </p>
-                      </div>
-                      <DollarSign className="h-8 w-8 text-blue-500" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Historique */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle>Historique des Commissions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4" />
-                    <p>Aucune commission pour le moment</p>
-                    <p className="text-sm">Partagez votre code promo pour commencer à gagner !</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              {/* Rang actuel */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Award className="h-5 w-5 mr-2 text-gold" />
-                    Mon Rang
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold gold-text mb-2">
-                      Rang {teamMember.rank}
-                    </div>
-                    <div className="text-lg font-semibold mb-4">
-                      {currentRank.title}
-                    </div>
-                    <Badge variant="secondary" className="mb-4">
-                      Commission: {currentRank.commission}%
-                    </Badge>
-
-                    {nextRank && (
-                      <div className="mt-4 p-4 bg-gold/10 rounded-lg border border-gold/20">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Prochain rang: Rang {nextRank.level}
-                        </p>
-                        <p className="text-sm">
-                          {nextRank.salesNeeded - teamMember.total_sales > 0 
-                            ? `${nextRank.salesNeeded - teamMember.total_sales} ventes restantes`
-                            : "Rang maximum atteint !"
-                          }
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Actions rapides */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle>Actions Rapides</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    className="w-full btn-gold" 
-                    onClick={() => navigate('/profile')}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Mon Profil
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-gold/20"
-                    disabled
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Demander un retrait
-                  </Button>
-
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-gold/20"
-                    onClick={() => window.open(`https://wa.me/?text=Découvrez Tasedda avec mon code promo: ${teamMember.promo_code} et bénéficiez de réductions exclusives !`, '_blank')}
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Partager mon code
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Support */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle>Support Team</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Besoin d'aide ? Notre équipe est là pour vous accompagner.
-                  </p>
-                  <Button variant="outline" className="w-full border-gold/20">
-                    Contacter le support
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+    <div className="min-h-screen bg-black py-8">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Mon Espace Équipe</h1>
+          <p className="text-gray-400">Gérez vos commissions et suivez vos performances</p>
         </div>
-      </main>
 
-      <Footer />
+        {/* Statistiques principales */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="glass-effect border-gold/20">
+            <CardContent className="p-6 text-center">
+              <div className="text-3xl mb-2">{rankInfo.icon}</div>
+              <div className="text-2xl font-bold text-gold">{rankInfo.title}</div>
+              <div className="text-sm text-gray-400">Rang {teamData.rank}</div>
+              <div className="text-sm text-gray-400">{rankInfo.commission}% commission</div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-effect border-green-500/20">
+            <CardContent className="p-6 text-center">
+              <TrendingUp className="h-8 w-8 mx-auto text-green-400 mb-2" />
+              <div className="text-2xl font-bold text-green-400">{teamData.total_sales}</div>
+              <div className="text-sm text-gray-400">Ventes totales</div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-effect border-orange-500/20">
+            <CardContent className="p-6 text-center">
+              <Gift className="h-8 w-8 mx-auto text-orange-400 mb-2" />
+              <div className="text-2xl font-bold text-orange-400">{pendingAmount.toLocaleString()} DA</div>
+              <div className="text-sm text-gray-400">En attente</div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-effect border-green-500/20">
+            <CardContent className="p-6 text-center">
+              <TrendingUp className="h-8 w-8 mx-auto text-green-400 mb-2" />
+              <div className="text-2xl font-bold text-green-400">{availableAmount.toLocaleString()} DA</div>
+              <div className="text-sm text-gray-400">Disponible</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Code promo */}
+          <Card className="glass-effect border-gold/20">
+            <CardHeader>
+              <CardTitle className="text-gold">Mon Code Promo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-400">Votre code promo :</p>
+                  <p className="text-2xl font-bold text-gold font-mono">{teamData.promo_code}</p>
+                </div>
+                <Button onClick={copyPromoCode} variant="outline" size="sm">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-sm text-gray-400 mt-4">
+                Partagez ce code avec vos clients pour gagner des commissions sur leurs achats.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Commissions récentes */}
+          <Card className="glass-effect border-gold/20">
+            <CardHeader>
+              <CardTitle className="text-gold">Commissions Récentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {commissions.slice(0, 5).map((commission) => (
+                  <div key={commission.id} className="flex justify-between items-center p-3 bg-black/30 rounded-lg">
+                    <div>
+                      <p className="font-medium text-white">{commission.amount.toLocaleString()} DA</p>
+                      <p className="text-sm text-gray-400">
+                        {commission.type === 'sale' ? 'Vente' : 'Bonus d\'affiliation'}
+                      </p>
+                    </div>
+                    <Badge className={
+                      commission.status === 'pending' ? 'bg-orange-500/20 text-orange-400' :
+                      commission.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }>
+                      {commission.status === 'pending' ? 'En attente' :
+                       commission.status === 'approved' ? 'Approuvé' : 'Payé'}
+                    </Badge>
+                  </div>
+                ))}
+                {commissions.length === 0 && (
+                  <p className="text-gray-400 text-center py-4">Aucune commission pour le moment</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Commandes affiliées */}
+        <Card className="glass-effect border-gold/20 mt-8">
+          <CardHeader>
+            <CardTitle className="text-gold">Commandes Affiliées</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {affiliatedOrders.map((order) => (
+                <div key={order.id} className="flex justify-between items-center p-4 bg-black/30 rounded-lg">
+                  <div>
+                    <p className="font-semibold text-white">#{order.order_number}</p>
+                    <p className="text-sm text-gray-400">
+                      {order.profiles?.full_name || 'Client'} • {order.total_amount.toLocaleString()} DA
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge className={
+                    order.order_status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                    order.order_status === 'shipped' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-orange-500/20 text-orange-400'
+                  }>
+                    {order.order_status === 'delivered' ? 'Livré' :
+                     order.order_status === 'shipped' ? 'Expédié' : 'En cours'}
+                  </Badge>
+                </div>
+              ))}
+              {affiliatedOrders.length === 0 && (
+                <p className="text-gray-400 text-center py-8">Aucune commande affiliée pour le moment</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -90,6 +90,7 @@ export interface TeamMember {
   total_sales: number;
   total_commissions: number;
   available_commissions: number;
+  pending_commissions?: number;
   invited_by: string | null;
   is_active: boolean;
   created_at: string;
@@ -147,8 +148,15 @@ export interface Order {
     city: string;
     wilaya: string;
   };
+  shipping_cost?: number;
+  delivery_method?: string;
   created_at: string;
   updated_at: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 export interface HomepageContent {
@@ -174,4 +182,16 @@ export interface TeamRequest {
     email: string;
     phone: string;
   };
+}
+
+export interface Commission {
+  id: string;
+  team_member_id: string;
+  order_id?: string;
+  amount: number;
+  percentage?: number;
+  status: 'pending' | 'approved' | 'paid';
+  type: 'sale' | 'affiliation_bonus';
+  metadata?: any;
+  created_at: string;
 }
