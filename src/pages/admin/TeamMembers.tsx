@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -92,9 +91,9 @@ const TeamMembers = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(member =>
-        member.profiles.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.profiles.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.promo_code.toLowerCase().includes(searchTerm.toLowerCase())
+        (member.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (member.promo_code?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
       );
     }
 
@@ -284,7 +283,7 @@ const TeamMembers = () => {
               <Star className="h-8 w-8 text-purple-400" />
               <div>
                 <p className="text-sm font-bold text-purple-400">
-                  {stats.topPerformer ? stats.topPerformer.profiles.full_name : 'N/A'}
+                  {stats.topPerformer && stats.topPerformer.profiles?.full_name ? stats.topPerformer.profiles.full_name : 'N/A'}
                 </p>
                 <p className="text-xs text-muted-foreground">Top Performer</p>
               </div>
@@ -337,7 +336,7 @@ const TeamMembers = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
-                      <h3 className="font-semibold text-lg">{member.profiles.full_name}</h3>
+                      <h3 className="font-semibold text-lg">{member.profiles?.full_name || 'N/A'}</h3>
                       <Badge className={`${member.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                         {member.is_active ? 'Actif' : 'Inactif'}
                       </Badge>
@@ -349,7 +348,7 @@ const TeamMembers = () => {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Email</p>
-                        <p>{member.profiles.email}</p>
+                        <p>{member.profiles?.email || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Code Promo</p>
@@ -470,7 +469,7 @@ const TeamMembers = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card className="w-full max-w-md mx-4 glass-effect border-gold/20">
             <CardHeader>
-              <CardTitle>Modifier le rang de {editingMember.profiles.full_name}</CardTitle>
+              <CardTitle>Modifier le rang de {editingMember?.profiles?.full_name || 'N/A'}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
