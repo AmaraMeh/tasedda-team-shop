@@ -44,6 +44,7 @@ const TeamMembers = () => {
     totalMembers: 0,
     activeMembers: 0,
     totalCommissions: 0,
+    pendingCommissions: 0,
     topPerformer: null as TeamMember | null
   });
 
@@ -69,11 +70,32 @@ const TeamMembers = () => {
       if (error) throw error;
       
       if (data) {
-        const mappedMembers = data.map(item => ({
-          ...item,
-          commission_earned: item.total_commissions || 0
-        }));
-        setMembers(mappedMembers);
+        // Calculer les commissions en attente et disponibles pour chaque membre
+        const membersWithCommissions = await Promise.all(
+          data.map(async (member) => {
+            const { data: commissions } = await supabase
+              .from('commissions')
+              .select('amount, status')
+              .eq('team_member_id', member.id);
+
+            const pendingCommissions = commissions
+              ?.filter(c => c.status === 'pending')
+              ?.reduce((sum, c) => sum + c.amount, 0) || 0;
+
+            const availableCommissions = commissions
+              ?.filter(c => c.status === 'approved')
+              ?.reduce((sum, c) => sum + c.amount, 0) || 0;
+
+            return {
+              ...member,
+              commission_earned: member.total_commissions || 0,
+              pending_commissions: pendingCommissions,
+              available_commissions: availableCommissions
+            };
+          })
+        );
+
+        setMembers(membersWithCommissions);
       }
     } catch (error: any) {
       toast({
@@ -110,6 +132,7 @@ const TeamMembers = () => {
     const totalMembers = members.length;
     const activeMembers = members.filter(m => m.is_active).length;
     const totalCommissions = members.reduce((sum, m) => sum + (m.total_commissions || 0), 0);
+    const pendingCommissions = members.reduce((sum, m) => sum + (m.pending_commissions || 0), 0);
     const topPerformer = members.reduce((top, member) => 
       !top || member.total_sales > top.total_sales ? member : top, 
       null as TeamMember | null
@@ -119,6 +142,7 @@ const TeamMembers = () => {
       totalMembers,
       activeMembers,
       totalCommissions,
+      pendingCommissions,
       topPerformer
     });
   };
@@ -173,6 +197,31 @@ const TeamMembers = () => {
       toast({
         title: "Statut mis à jour",
         description: `Le membre a été ${newStatus ? 'activé' : 'désactivé'}`,
+      });
+
+      fetchMembers();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const approveCommissions = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('commissions')
+        .update({ status: 'approved' })
+        .eq('team_member_id', memberId)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+
+      toast({
+        title: "Commissions approuvées",
+        description: "Les commissions en attente ont été approuvées",
       });
 
       fetchMembers();
@@ -240,7 +289,7 @@ const TeamMembers = () => {
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="glass-effect border-blue-500/20">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -272,6 +321,18 @@ const TeamMembers = () => {
               <div>
                 <p className="text-2xl font-bold gold-text">{stats.totalCommissions.toLocaleString()} DA</p>
                 <p className="text-sm text-muted-foreground">Total Commissions</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-effect border-orange-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Crown className="h-8 w-8 text-orange-400" />
+              <div>
+                <p className="text-2xl font-bold text-orange-400">{stats.pendingCommissions.toLocaleString()} DA</p>
+                <p className="text-sm text-muted-foreground">En Attente</p>
               </div>
             </div>
           </CardContent>
@@ -351,6 +412,10 @@ const TeamMembers = () => {
                         <p>{member.profiles?.email || 'N/A'}</p>
                       </div>
                       <div>
+                        <p className="text-muted-foreground">Téléphone</p>
+                        <p>{member.profiles?.phone || 'N/A'}</p>
+                      </div>
+                      <div>
                         <p className="text-muted-foreground">Code Promo</p>
                         <div className="flex items-center gap-2">
                           <p className="font-mono text-gold">{member.promo_code}</p>
@@ -368,9 +433,16 @@ const TeamMembers = () => {
                         <p className="text-muted-foreground">Ventes Totales</p>
                         <p className="font-semibold">{member.total_sales}</p>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-4 p-3 bg-black/30 rounded-lg">
                       <div>
-                        <p className="text-muted-foreground">Commissions</p>
-                        <p className="font-semibold gold-text">{(member.total_commissions || 0).toLocaleString()} DA</p>
+                        <p className="text-muted-foreground">Commissions en attente</p>
+                        <p className="font-semibold text-orange-400">{(member.pending_commissions || 0).toLocaleString()} DA</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Commissions disponibles</p>
+                        <p className="font-semibold text-green-400">{(member.available_commissions || 0).toLocaleString()} DA</p>
                       </div>
                     </div>
                     
@@ -379,7 +451,18 @@ const TeamMembers = () => {
                     </p>
                   </div>
                   
-                  <div className="flex space-x-2">
+                  <div className="flex flex-col space-y-2">
+                    {member.pending_commissions > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={() => approveCommissions(member.id)}
+                        className="bg-green-500 hover:bg-green-600"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approuver Commissions
+                      </Button>
+                    )}
+                    
                     <Button
                       size="sm"
                       variant="outline"

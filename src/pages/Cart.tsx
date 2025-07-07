@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
@@ -206,12 +207,12 @@ const Cart = () => {
                         <span>-{discount.toLocaleString()} DA</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm text-white">
+                    <div className="flex justify-between text-sm text-orange-400">
                       <span>Livraison:</span>
-                      <span>Gratuite</span>
+                      <span>Calculée à l'étape suivante</span>
                     </div>
                     <div className="flex justify-between font-bold text-lg text-white border-t border-gold/20 pt-2">
-                      <span>Total:</span>
+                      <span>Sous-total:</span>
                       <span className="gold-text">{getCartTotal().toLocaleString()} DA</span>
                     </div>
                   </div>

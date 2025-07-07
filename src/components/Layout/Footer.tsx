@@ -1,111 +1,104 @@
 
-import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { Package, Users, Heart, Mail, Phone, MapPin } from 'lucide-react';
+import React from 'react';
+import { Facebook, Instagram, Phone, Mail } from 'lucide-react';
 
 const Footer = () => {
-  const { t } = useTranslation();
-
   return (
-    <footer className="bg-black/90 border-t border-gold/20 py-12">
-      <div className="container mx-auto px-4">
+    <footer className="bg-black border-t border-gold/20 mt-20">
+      <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand Section */}
-          <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="flex items-center space-x-2 mb-4">
-              <div className="gold-gradient rounded-lg p-2">
-                <Package className="h-6 w-6 text-black" />
-              </div>
-              <span className="text-xl font-bold gold-text">LION DZ</span>
-            </Link>
-            <p className="text-muted-foreground mb-4 leading-relaxed">
-              وجهتك الأولى للأزياء الراقية في الجزائر. اكتشف ملابس عالية الجودة مع نظام العضوية الفريد لدينا ومتاجر الشركاء المحليين.
+          {/* Logo et description */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold gold-text">Marque Tasseda</h3>
+            <p className="text-muted-foreground text-sm">
+              Votre destination premium pour la mode et les accessoires de qualité.
             </p>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4" />
-                <span>contact@lion-dz.com</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Phone className="h-4 w-4" />
-                <span>+213 XXX XXX XXX</span>
-              </div>
+            <div className="flex space-x-4">
+              <a 
+                href="https://www.instagram.com/marque_tasseda?igsh=eXM5eHRjeXUyaG1w" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-gold transition-colors"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a 
+                href="https://www.facebook.com/profile.php?id=61555754131648" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-gold transition-colors"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-semibold text-white mb-4">{t('footer.shop')}</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/products" className="text-muted-foreground hover:text-gold transition-colors">
-                  المنتجات
-                </Link>
-              </li>
-              <li>
-                <Link to="/local-sellers" className="text-muted-foreground hover:text-gold transition-colors">
-                  البائعون المحليون
-                </Link>
-              </li>
-              <li>
-                <Link to="/wholesalers" className="text-muted-foreground hover:text-gold transition-colors">
-                  تجار الجملة
-                </Link>
-              </li>
-              <li>
-                <Link to="/seller" className="text-muted-foreground hover:text-gold transition-colors">
-                  كن بائعاً
-                </Link>
-              </li>
-            </ul>
+          {/* Navigation rapide */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-white">Navigation</h4>
+            <div className="space-y-2 text-sm">
+              <a href="/products" className="block text-muted-foreground hover:text-gold transition-colors">
+                Produits
+              </a>
+              <a href="/team" className="block text-muted-foreground hover:text-gold transition-colors">
+                Rejoindre la Team
+              </a>
+              <a href="/seller" className="block text-muted-foreground hover:text-gold transition-colors">
+                Devenir Vendeur
+              </a>
+              <a href="/local-sellers" className="block text-muted-foreground hover:text-gold transition-colors">
+                Vendeurs Locaux
+              </a>
+              <a href="/wholesalers" className="block text-muted-foreground hover:text-gold transition-colors">
+                Grossistes
+              </a>
+            </div>
           </div>
 
-          {/* Team & Support */}
-          <div>
-            <h3 className="font-semibold text-white mb-4">{t('footer.team')}</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/team" className="text-muted-foreground hover:text-gold transition-colors">
-                  انضم للفريق
-                </Link>
-              </li>
-              <li>
-                <Link to="/profile" className="text-muted-foreground hover:text-gold transition-colors">
-                  الملف الشخصي
-                </Link>
-              </li>
-              <li>
-                <Link to="/cart" className="text-muted-foreground hover:text-gold transition-colors">
-                  سلة التسوق
-                </Link>
-              </li>
-              <li>
-                <Link to="/auth" className="text-muted-foreground hover:text-gold transition-colors">
-                  تسجيل الدخول
-                </Link>
-              </li>
-            </ul>
+          {/* Informations livraison */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-white">Livraison</h4>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Livraison dans toute l'Algérie</p>
+              <p>Paiement à la livraison disponible</p>
+              <p>Tarifs selon la wilaya</p>
+              <p>Livraison à domicile ou au bureau</p>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-white">Contact</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Phone className="h-4 w-4" />
+                <div>
+                  <a href="tel:0657433000" className="hover:text-gold transition-colors">
+                    0657 43 30 00
+                  </a>
+                  <br />
+                  <a href="tel:0555688017" className="hover:text-gold transition-colors">
+                    0555 68 80 17
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Mail className="h-4 w-4" />
+                <a 
+                  href="mailto:marquetasseda@gmail.com" 
+                  className="hover:text-gold transition-colors"
+                >
+                  marquetasseda@gmail.com
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="border-t border-gold/20 mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-              {t('footer.copyright')}
-            </p>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>الجزائر</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <span className="text-muted-foreground">صُنع بـ</span>
-                <Heart className="h-4 w-4 text-red-500" />
-                <span className="text-muted-foreground">في الجزائر</span>
-              </div>
-            </div>
-          </div>
+        <div className="border-t border-gold/20 mt-8 pt-8 text-center">
+          <p className="text-muted-foreground text-sm">
+            © 2024 Marque Tasseda. Tous droits réservés.
+          </p>
         </div>
       </div>
     </footer>

@@ -1,33 +1,37 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CreditCard, Truck } from 'lucide-react';
+import { CreditCard, Truck, MapPin } from 'lucide-react';
 
 interface CheckoutFormProps {
   onSuccess: () => void;
 }
 
 const wilayas = [
-  'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar',
-  'Blida', 'Bouira', 'Tamanrasset', 'Tébessa', 'Tlemcen', 'Tiaret', 'Tizi Ouzou', 'Alger',
-  'Djelfa', 'Jijel', 'Sétif', 'Saïda', 'Skikda', 'Sidi Bel Abbès', 'Annaba', 'Guelma',
-  'Constantine', 'Médéa', 'Mostaganem', 'M\'Sila', 'Mascara', 'Ouargla', 'Oran', 'El Bayadh',
-  'Illizi', 'Bordj Bou Arréridj', 'Boumerdès', 'El Tarf', 'Tindouf', 'Tissemsilt', 'El Oued',
-  'Khenchela', 'Souk Ahras', 'Tipaza', 'Mila', 'Aïn Defla', 'Naâma', 'Aïn Témouchent',
-  'Ghardaïa', 'Relizane'
+  'ADRAR', 'CHLEF', 'LAGHOUAT', 'OUM EL BOUAGHI', 'BATNA', 'BEJAIA', 'BISKRA', 'BECHAR',
+  'BLIDA', 'BOUIRA', 'TAMANRASSET', 'TEBESSA', 'TLEMCEN', 'TIARET', 'TIZI OUZOU', 'ALGER',
+  'DJELFA', 'JIJEL', 'SETIF', 'SAIDA', 'SKIKDA', 'SIDI BEL ABBESS', 'ANNABA', 'GUELMA',
+  'CONSTANTINE', 'MEDEA', 'MOSTAGANEM', 'M\'SILA', 'MASCARA', 'OUARGLA', 'ORAN', 'EL BAYADH',
+  'ILLIZI', 'BORDJ BOU ARRERIDJ', 'BOUMERDES', 'EL TARF', 'TINDOUF', 'TISSEMSILT', 'EL OUED',
+  'KHENCHELA', 'SOUK AHRAS', 'TIPAZA', 'MILA', 'AIN DEFLA', 'NAAMA', 'AIN TEMOUCHENT',
+  'GHARDAIA', 'RELIZANE', 'TIMIMOUN', 'BORDJ BADJI MOKHTAR', 'OULED DJELLAL', 'BENI ABBES',
+  'IN SALAH', 'IN GUEZZAM', 'TOUGGOURT', 'DJANET', 'M\'GHAIR', 'EL MENIA'
 ];
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
   const { items, getCartTotal, promoCode, discount, clearCart } = useCart();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [shippingRates, setShippingRates] = useState<any>(null);
+  const [shippingCost, setShippingCost] = useState(0);
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -36,8 +40,54 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
     commune: '',
     wilaya: '',
     postal_code: '',
-    payment_method: 'cash_on_delivery'
+    payment_method: 'cash_on_delivery',
+    delivery_method: 'home_delivery'
   });
+
+  useEffect(() => {
+    if (formData.wilaya) {
+      fetchShippingRates(formData.wilaya);
+    }
+  }, [formData.wilaya]);
+
+  const fetchShippingRates = async (wilaya: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('shipping_rates')
+        .select('*')
+        .eq('wilaya', wilaya)
+        .single();
+
+      if (error) throw error;
+      
+      setShippingRates(data);
+      
+      // Set default shipping cost based on delivery method
+      const cost = formData.delivery_method === 'home_delivery' 
+        ? data.home_delivery_price 
+        : data.office_delivery_price || data.home_delivery_price;
+      setShippingCost(cost || 0);
+    } catch (error) {
+      console.error('Error fetching shipping rates:', error);
+      setShippingRates(null);
+      setShippingCost(0);
+    }
+  };
+
+  const handleDeliveryMethodChange = (method: string) => {
+    setFormData({ ...formData, delivery_method: method });
+    
+    if (shippingRates) {
+      const cost = method === 'home_delivery' 
+        ? shippingRates.home_delivery_price 
+        : shippingRates.office_delivery_price || shippingRates.home_delivery_price;
+      setShippingCost(cost || 0);
+    }
+  };
+
+  const getTotalWithShipping = () => {
+    return getCartTotal() + shippingCost;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,11 +99,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
       
       const orderData = {
         order_number: orderNumber,
-        user_id: null, // Pas besoin de compte
-        total_amount: getCartTotal(),
+        user_id: null,
+        total_amount: getTotalWithShipping(),
         discount_amount: discount,
         promo_code: promoCode,
         payment_method: formData.payment_method,
+        delivery_method: formData.delivery_method,
+        shipping_cost: shippingCost,
         payment_status: 'pending',
         order_status: 'pending',
         shipping_address: {
@@ -91,33 +143,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
 
       if (itemsError) throw itemsError;
 
-      // If promo code was used, create commission for team member
+      // If promo code was used, process commission
       if (promoCode) {
-        const { data: teamMember } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('promo_code', promoCode)
-          .single();
-
-        if (teamMember) {
-          const commissionRate = teamMember.rank === 1 ? 0.06 :
-                               teamMember.rank === 2 ? 0.08 :
-                               teamMember.rank === 3 ? 0.10 :
-                               teamMember.rank === 4 ? 0.12 : 0.12;
-
-          await supabase.from('commissions').insert({
-            team_member_id: teamMember.id,
-            order_id: order.id,
-            amount: getCartTotal() * commissionRate,
-            percentage: commissionRate,
-            status: 'pending'
-          });
-        }
+        await supabase.rpc('process_team_commission', { order_id_param: order.id });
       }
 
       toast({
-        title: "Commande créée",
-        description: `Votre commande ${orderNumber} a été créée avec succès`,
+        title: "Commande passée avec succès !",
+        description: `Votre commande ${orderNumber} a été enregistrée. Vous recevrez bientôt un appel de confirmation.`,
       });
 
       clearCart();
@@ -226,6 +259,46 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
             </div>
           </div>
 
+          {/* Delivery Method Selection */}
+          {shippingRates && (
+            <div className="space-y-3">
+              <Label>Mode de livraison *</Label>
+              <RadioGroup 
+                value={formData.delivery_method} 
+                onValueChange={handleDeliveryMethodChange}
+                className="space-y-2"
+              >
+                <div className="flex items-center space-x-2 p-3 border border-gold/20 rounded-lg">
+                  <RadioGroupItem value="home_delivery" id="home_delivery" />
+                  <div className="flex-1 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <Label htmlFor="home_delivery">Livraison à domicile</Label>
+                    </div>
+                    <span className="font-bold text-gold">
+                      {shippingRates.home_delivery_price?.toLocaleString()} DA
+                    </span>
+                  </div>
+                </div>
+                
+                {shippingRates.office_delivery_price && (
+                  <div className="flex items-center space-x-2 p-3 border border-gold/20 rounded-lg">
+                    <RadioGroupItem value="office_delivery" id="office_delivery" />
+                    <div className="flex-1 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4" />
+                        <Label htmlFor="office_delivery">Livraison au bureau</Label>
+                      </div>
+                      <span className="font-bold text-gold">
+                        {shippingRates.office_delivery_price?.toLocaleString()} DA
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </RadioGroup>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Méthode de paiement</Label>
             <Select value={formData.payment_method} onValueChange={(value) => setFormData({...formData, payment_method: value})}>
@@ -252,7 +325,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
           {/* Order Summary */}
           <div className="border-t border-gold/20 pt-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Sous-total:</span>
+              <span>Sous-total produits:</span>
               <span>{(getCartTotal() + discount).toLocaleString()} DA</span>
             </div>
             {discount > 0 && (
@@ -261,18 +334,22 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccess }) => {
                 <span>-{discount.toLocaleString()} DA</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg gold-text">
+            <div className="flex justify-between text-sm">
+              <span>Frais de livraison:</span>
+              <span className="font-bold text-gold">{shippingCost.toLocaleString()} DA</span>
+            </div>
+            <div className="flex justify-between font-bold text-lg gold-text border-t border-gold/20 pt-2">
               <span>Total:</span>
-              <span>{getCartTotal().toLocaleString()} DA</span>
+              <span>{getTotalWithShipping().toLocaleString()} DA</span>
             </div>
           </div>
 
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || !formData.wilaya}
             className="w-full btn-gold"
           >
-            {loading ? 'Création...' : 'Confirmer la commande'}
+            {loading ? 'Traitement...' : 'Confirmer la commande'}
           </Button>
         </form>
       </CardContent>
