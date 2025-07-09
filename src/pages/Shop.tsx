@@ -1,13 +1,18 @@
+
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
 import Footer from '@/components/Layout/Footer';
+import Header from '@/components/Layout/Header';
 import { Shop as ShopType, Product } from '@/types';
+import { MessageCircle, ExternalLink } from 'lucide-react';
 
 const Shop = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [shop, setShop] = useState<ShopType | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,56 +25,68 @@ const Shop = () => {
   }, [slug]);
 
   const fetchShop = async () => {
-    const { data, error } = await supabase
-      .from('shops')
-      .select('*')
-      .eq('slug', slug)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('sellers')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
 
-    if (error) {
+      if (error) {
+        console.error('Error fetching shop:', error);
+        return;
+      }
+
+      if (data) {
+        const typedShop: ShopType = {
+          ...data,
+          subscription_status: data.subscription_status as 'active' | 'trial' | 'expired'
+        };
+        setShop(typedShop);
+      }
+    } catch (error) {
       console.error('Error fetching shop:', error);
-    } else if (data) {
-      const typedShop: ShopType = {
-        ...data,
-        subscription_status: data.subscription_status as 'active' | 'trial' | 'expired'
-      };
-      setShop(typedShop);
     }
   };
 
   const fetchProducts = async () => {
     if (!slug) return;
 
-    // First get the shop to find the owner
-    const { data: shopData } = await supabase
-      .from('shops')
-      .select('user_id')
-      .eq('slug', slug)
-      .single();
+    try {
+      // First get the seller to find the owner
+      const { data: sellerData } = await supabase
+        .from('sellers')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
 
-    if (!shopData) return;
+      if (!sellerData) return;
 
-    // Then get products from that seller
-    const { data } = await supabase
-      .from('products')
-      .select(`
-        *,
-        categories(name)
-      `)
-      .eq('seller_id', shopData.user_id)
-      .eq('is_active', true);
+      // Then get products from that seller
+      const { data } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name)
+        `)
+        .eq('seller_id', sellerData.id)
+        .eq('is_active', true);
 
-    if (data) {
-      const productsWithCategory = data.map(item => ({
-        ...item,
-        image_url: item.image_url || '/placeholder.svg',
-        image: item.image_url || '/placeholder.svg',
-        category: item.categories?.name || 'Sans catégorie',
-        inStock: item.stock_quantity ? item.stock_quantity > 0 : true
-      }));
-      setProducts(productsWithCategory);
+      if (data) {
+        const productsWithCategory = data.map(item => ({
+          ...item,
+          image_url: item.image_url || '/placeholder.svg',
+          image: item.image_url || '/placeholder.svg',
+          category: item.categories?.name || 'Sans catégorie',
+          inStock: item.stock_quantity ? item.stock_quantity > 0 : true
+        }));
+        setProducts(productsWithCategory);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (loading) {
@@ -82,41 +99,33 @@ const Shop = () => {
 
   if (!shop) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Boutique non trouvée</h1>
-          <p className="text-muted-foreground">La boutique que vous recherchez n'existe pas.</p>
+      <div className="min-h-screen bg-black">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-4">Boutique non trouvée</h1>
+            <p className="text-muted-foreground mb-6">La boutique que vous recherchez n'existe pas.</p>
+            <Button onClick={() => navigate('/')} className="btn-gold">
+              Retour à l'accueil
+            </Button>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-black">
+      <Header />
+      
       {/* Shop Header */}
       <div className="relative">
-        {shop.cover_url && (
-          <div 
-            className="h-64 bg-cover bg-center"
-            style={{ backgroundImage: `url(${shop.cover_url})` }}
-          >
-            <div className="absolute inset-0 bg-black/50" />
-          </div>
-        )}
-        
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-start gap-6">
-            {shop.logo_url && (
-              <img
-                src={shop.logo_url}
-                alt={shop.name}
-                className="w-24 h-24 rounded-full border-4 border-gold object-cover"
-              />
-            )}
-            
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-3xl font-bold text-white">{shop.name}</h1>
+                <h1 className="text-3xl font-bold text-white">{shop.business_name}</h1>
                 <Badge variant={shop.subscription_status === 'active' ? 'default' : 'secondary'}>
                   {shop.subscription_status === 'active' ? 'Actif' : 
                    shop.subscription_status === 'trial' ? 'Essai' : 'Expiré'}
@@ -127,10 +136,24 @@ const Shop = () => {
                 <p className="text-muted-foreground mb-4">{shop.description}</p>
               )}
               
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
                 <span>/{shop.slug}</span>
                 <span>•</span>
                 <span>{products.length} produits</span>
+                <span>•</span>
+                <span>{shop.seller_type === 'wholesale' ? 'Grossiste' : 'Vendeur Local'}</span>
+              </div>
+
+              {/* Contact buttons */}
+              <div className="flex gap-4">
+                <Button className="btn-gold">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Contacter
+                </Button>
+                <Button variant="outline" className="border-gold/20">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Plus d'infos
+                </Button>
               </div>
             </div>
           </div>

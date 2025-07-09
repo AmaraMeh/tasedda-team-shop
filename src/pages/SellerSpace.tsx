@@ -46,13 +46,20 @@ interface Order {
   };
 }
 
+interface Stats {
+  totalProducts: number;
+  totalOrders: number;
+  totalRevenue: number;
+  activeProducts: number;
+}
+
 const SellerSpace = () => {
   const { user, loading } = useAuth();
   const [seller, setSeller] = useState<Seller | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0,
@@ -175,19 +182,6 @@ const SellerSpace = () => {
     }
   };
 
-  const getSubscriptionStatus = (status: string) => {
-    switch (status) {
-      case 'trial':
-        return { label: 'Période d\'essai', variant: 'secondary' as const, color: 'text-blue-500' };
-      case 'active':
-        return { label: 'Actif', variant: 'default' as const, color: 'text-green-500' };
-      case 'expired':
-        return { label: 'Expiré', variant: 'destructive' as const, color: 'text-red-500' };
-      default:
-        return { label: 'Inconnu', variant: 'secondary' as const, color: 'text-gray-500' };
-    }
-  };
-
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -237,9 +231,6 @@ const SellerSpace = () => {
       </div>
     );
   }
-
-  const subscriptionInfo = getSubscriptionStatus(seller.subscription_status);
-  const daysLeft = Math.ceil((new Date(seller.subscription_expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
     <div className="min-h-screen bg-black">
@@ -418,8 +409,8 @@ const SellerSpace = () => {
                       <Store className="h-5 w-5 mr-2 text-gold" />
                       Ma Boutique
                     </div>
-                    <Badge variant={subscriptionInfo.variant}>
-                      {subscriptionInfo.label}
+                    <Badge variant={seller.subscription_status === 'active' ? 'default' : 'secondary'}>
+                      {seller.subscription_status}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -443,50 +434,14 @@ const SellerSpace = () => {
                     )}
 
                     <div className="flex items-center justify-between">
-                      <Button className="btn-gold flex-1 mr-2">
+                      <Button 
+                        className="btn-gold flex-1 mr-2"
+                        onClick={() => navigate(`/boutique/${seller.slug}`)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         Voir ma boutique
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Abonnement */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2 text-gold" />
-                    Abonnement
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className={`text-2xl font-bold ${subscriptionInfo.color} mb-2`}>
-                        {subscriptionInfo.label}
-                      </div>
-                      
-                      {seller.subscription_status === 'trial' && (
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                          <p className="text-sm text-blue-400 mb-1">Période d'essai</p>
-                          <p className="text-sm text-muted-foreground">
-                            {daysLeft > 0 ? `${daysLeft} jours restants` : 'Expiré'}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="mt-4 text-sm text-muted-foreground">
-                        <p>Frais mensuel: {seller.monthly_fee} DA</p>
-                        <p>Expire le: {new Date(seller.subscription_expires_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-
-                    {seller.subscription_status === 'trial' && daysLeft <= 7 && (
-                      <Button className="w-full btn-gold">
-                        Activer l'abonnement
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>

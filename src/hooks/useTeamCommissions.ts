@@ -22,7 +22,7 @@ export const useTeamCommissions = () => {
         .from('team_members')
         .select('id, promo_code')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (teamMemberError) {
         console.error('Error fetching team member:', teamMemberError);
@@ -84,19 +84,6 @@ export const useTeamCommissions = () => {
       
       setPendingAmount(pending);
       setAvailableAmount(available);
-
-      // Mettre à jour les montants dans team_members
-      const { error: updateError } = await supabase
-        .from('team_members')
-        .update({
-          pending_commissions: pending,
-          available_commissions: available
-        })
-        .eq('id', teamMember.id);
-
-      if (updateError) {
-        console.error('Error updating team member commissions:', updateError);
-      }
 
     } catch (error) {
       console.error('Error fetching commissions:', error);

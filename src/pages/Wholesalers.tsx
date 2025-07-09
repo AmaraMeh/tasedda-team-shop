@@ -1,100 +1,110 @@
 
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import ProductCard from '@/components/ProductCard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, Phone, Mail, MessageCircle, Users, Store } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { Building2, Store, Eye, MessageCircle, Package } from 'lucide-react';
 
 interface Seller {
   id: string;
-  user_id: string;
   business_name: string;
   slug: string;
   description: string;
-  seller_type: 'normal' | 'wholesale';
-  is_active: boolean;
-  monthly_fee: number;
-  status: 'pending' | 'active' | 'suspended';
-  subscription_status: 'trial' | 'active' | 'expired';
-  subscription_expires_at: string;
+  subscription_status: string;
   created_at: string;
-  updated_at: string;
-  profiles: {
+  user_id: string;
+  profiles?: {
     full_name: string;
-    email: string;
-    phone: string;
+    city: string;
+    wilaya: string;
   };
-  product_count?: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image_url: string;
+  seller_id: string;
+  is_active: boolean;
+  stock_quantity: number;
+  categories?: {
+    name: string;
+  };
+  sellers?: {
+    business_name: string;
+    slug: string;
+  };
 }
 
 const Wholesalers = () => {
-  const { t } = useTranslation();
-  const [wholesalers, setWholesalers] = useState<Seller[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'sellers' | 'products'>('sellers');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchWholesalers();
+    fetchSellers();
+    fetchProducts();
   }, []);
 
-  const fetchWholesalers = async () => {
+  const fetchSellers = async () => {
     try {
       const { data, error } = await supabase
         .from('sellers')
         .select(`
           *,
-          profiles(full_name, email, phone)
+          profiles(full_name, city, wilaya)
         `)
         .eq('seller_type', 'wholesale')
         .eq('is_active', true)
-        .eq('status', 'active');
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      if (data) {
-        // Compter les produits pour chaque grossiste
-        const wholesalersWithProductCount = await Promise.all(
-          data.map(async (wholesaler) => {
-            const { count } = await supabase
-              .from('products')
-              .select('*', { count: 'exact', head: true })
-              .eq('seller_id', wholesaler.id)
-              .eq('is_active', true);
-            
-            return {
-              ...wholesaler,
-              seller_type: wholesaler.seller_type as 'normal' | 'wholesale',
-              status: wholesaler.status as 'pending' | 'active' | 'suspended',
-              subscription_status: wholesaler.subscription_status as 'trial' | 'active' | 'expired',
-              product_count: count || 0
-            };
-          })
-        );
-
-        setWholesalers(wholesalersWithProductCount);
-      }
+      setSellers(data || []);
     } catch (error) {
-      console.error('Error fetching wholesalers:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching sellers:', error);
     }
   };
 
-  const handleWhatsAppContact = (phone: string, businessName: string) => {
-    const message = `Bonjour, je suis intéressé par vos produits en gros de ${businessName}. Pouvez-vous me donner plus d'informations sur vos tarifs et conditions de vente ?`;
-    const whatsappUrl = `https://wa.me/213${phone.substring(1)}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          sellers!inner(business_name, slug, seller_type)
+        `)
+        .eq('sellers.seller_type', 'wholesale')
+        .eq('sellers.is_active', true)
+        .eq('sellers.status', 'approved')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-  const handleChatContact = (sellerId: string, businessName: string) => {
-    // For now, redirect to WhatsApp. Later, implement internal chat system
-    const message = `Bonjour, je souhaite discuter de vos produits en gros via votre boutique ${businessName}.`;
-    const whatsappUrl = `https://wa.me/213?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+      if (error) throw error;
+      
+      const productsWithImages = (data || []).map(product => ({
+        ...product,
+        image_url: product.image_url || '/placeholder.svg',
+        image: product.image_url || '/placeholder.svg',
+        category: product.categories?.name || 'Sans catégorie',
+        inStock: product.stock_quantity > 0
+      }));
+      
+      setProducts(productsWithImages);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -109,125 +119,126 @@ const Wholesalers = () => {
     <div className="min-h-screen bg-black">
       <Header />
       
-      <main className="container mx-auto px-4 py-20">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            <span className="gold-text">Grossistes</span> Partenaires
+      <main className="py-20">
+        <section className="container mx-auto px-4 text-center mb-12" data-aos="fade-up">
+          <Building2 className="h-16 w-16 mx-auto mb-4 text-gold" />
+          <h1 className="text-4xl font-display font-bold mb-4">
+            <span className="gold-text">Grossistes</span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Découvrez nos grossistes partenaires pour vos achats en grande quantité
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Découvrez nos grossistes partenaires et leurs produits en gros
           </p>
-          <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg max-w-4xl mx-auto">
-            <h3 className="text-lg font-semibold text-blue-400 mb-2">
-              Tarifs de livraison disponibles
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Consultez nos tarifs de livraison compétitifs pour toutes les wilayas d'Algérie. 
-              Livraison à domicile et points de retrait disponibles.
-            </p>
+        </section>
+
+        <div className="container mx-auto px-4">
+          {/* Tabs */}
+          <div className="flex justify-center mb-8">
+            <div className="flex space-x-1 bg-gray-900/50 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('sellers')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'sellers'
+                    ? 'bg-gold text-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Grossistes ({sellers.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('products')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'products'
+                    ? 'bg-gold text-black'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Produits ({products.length})
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {wholesalers.map((wholesaler) => (
-            <Card key={wholesaler.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all group">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold gold-text">{wholesaler.business_name}</h3>
-                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-                      <Package className="h-3 w-3 mr-1" />
-                      Grossiste
-                    </Badge>
-                  </div>
-                  
-                  <p className="text-muted-foreground text-sm">{wholesaler.description}</p>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center text-muted-foreground">
-                      <Users className="h-4 w-4 mr-2" />
-                      {wholesaler.profiles.full_name}
+          {activeTab === 'sellers' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {sellers.map((seller) => (
+                <Card key={seller.id} className="glass-effect border-gold/20 hover:border-gold/40 transition-all duration-300">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-gold">{seller.business_name}</CardTitle>
+                      <Badge className="bg-blue-500/20 text-blue-400">
+                        Grossiste
+                      </Badge>
                     </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <Phone className="h-4 w-4 mr-2" />
-                      {wholesaler.profiles.phone}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {seller.profiles && (
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Building2 className="h-4 w-4 mr-2" />
+                          {seller.profiles.city}, {seller.profiles.wilaya}
+                        </div>
+                      )}
+                      
+                      {seller.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {seller.description}
+                        </p>
+                      )}
+                      
+                      <div className="flex space-x-2">
+                        <Button 
+                          onClick={() => navigate(`/boutique/${seller.slug}`)}
+                          className="flex-1 btn-gold"
+                          size="sm"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Voir boutique
+                        </Button>
+                        <Button variant="outline" size="sm" className="border-gold/20">
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <Mail className="h-4 w-4 mr-2" />
-                      {wholesaler.profiles.email}
-                    </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <Package className="h-4 w-4 mr-2" />
-                      {wholesaler.product_count} produit{wholesaler.product_count !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Button asChild className="w-full btn-gold">
-                      <Link to={`/shop/${wholesaler.slug}`}>
-                        Voir les produits
-                      </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {products.map((product) => (
+                <div key={product.id} className="relative">
+                  <ProductCard product={product} />
+                  <div className="mt-2 text-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/boutique/${product.sellers?.slug}`)}
+                      className="text-xs border-gold/20 hover:border-gold/40"
+                    >
+                      <Store className="h-3 w-3 mr-1" />
+                      {product.sellers?.business_name}
                     </Button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button 
-                        onClick={() => handleWhatsAppContact(wholesaler.profiles.phone, wholesaler.business_name)}
-                        variant="outline"
-                        size="sm"
-                        className="border-green-500 text-green-400 hover:bg-green-500/10"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        WhatsApp
-                      </Button>
-                      <Button 
-                        onClick={() => handleChatContact(wholesaler.id, wholesaler.business_name)}
-                        variant="outline"
-                        size="sm"
-                        className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        Chat
-                      </Button>
-                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </div>
+          )}
+
+          {((activeTab === 'sellers' && sellers.length === 0) || 
+            (activeTab === 'products' && products.length === 0)) && (
+            <div className="text-center py-12">
+              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold text-white mb-2">
+                {activeTab === 'sellers' ? 'Aucun grossiste' : 'Aucun produit'}
+              </h3>
+              <p className="text-muted-foreground">
+                {activeTab === 'sellers' 
+                  ? 'Aucun grossiste disponible pour le moment.'
+                  : 'Aucun produit disponible pour le moment.'
+                }
+              </p>
+            </div>
+          )}
         </div>
-
-        {wholesalers.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Aucun grossiste disponible pour le moment.</p>
-          </div>
-        )}
-
-        {/* Shipping Information */}
-        <section className="mt-16 p-6 glass-effect border-gold/20 rounded-lg">
-          <h2 className="text-2xl font-bold text-center mb-6 gold-text">
-            Informations de Livraison
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-white">Tarifs Standards</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Livraison à domicile: 400-1600 DA selon la wilaya</li>
-                <li>• Point de retrait (Stop Desk): 200-1050 DA</li>
-                <li>• Livraison express disponible dans certaines wilayas</li>
-                <li>• Retour possible avec frais de 200 DA</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-white">Conditions Spéciales Grossistes</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Tarifs dégressifs selon la quantité</li>
-                <li>• Livraison gratuite à partir d'un certain montant</li>
-                <li>• Négociation possible pour les gros volumes</li>
-                <li>• Conditions de paiement flexibles</li>
-              </ul>
-            </div>
-          </div>
-        </section>
       </main>
 
       <Footer />

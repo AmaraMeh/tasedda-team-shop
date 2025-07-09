@@ -1,122 +1,132 @@
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import type { User } from '@supabase/supabase-js';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-// Type du contexte
-export type AuthContextType = {
+interface AuthContextType {
   user: User | null;
+  session: Session | null;
   loading: boolean;
-  isAdmin: boolean;
   signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
-const AuthContext = createContext<AuthContextType>({ 
-  user: null, 
-  loading: true, 
-  isAdmin: false,
-  signOut: async () => {} 
-});
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Récupère la session au chargement
-    supabase.auth.getSession().then(({ data }) => {
-      const currentUser = data?.session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        checkAdminStatus(currentUser.id);
-        handleUserRedirection(currentUser.id);
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      // Auto-redirect after login if not on excluded paths
+      if (session?.user && !isExcludedPath(location.pathname)) {
+        await handleAutoRedirect(session.user.id);
       }
+      
       setLoading(false);
-    });
-
-    // Écoute les changements d'auth
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        checkAdminStatus(currentUser.id);
-        handleUserRedirection(currentUser.id);
-      } else {
-        setIsAdmin(false);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      listener?.subscription.unsubscribe();
     };
-  }, [navigate]);
 
-  const checkAdminStatus = async (userId: string) => {
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Auto-redirect after sign in
+        await handleAutoRedirect(session.user.id);
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        navigate('/');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, location.pathname]);
+
+  const isExcludedPath = (path: string) => {
+    const excludedPaths = [
+      '/', '/auth', '/products', '/wholesalers', '/local-sellers', 
+      '/team', '/seller', '/contact', '/help', '/shipping', '/returns'
+    ];
+    return excludedPaths.includes(path) || path.startsWith('/product/') || path.startsWith('/boutique/');
+  };
+
+  const handleAutoRedirect = async (userId: string) => {
     try {
-      const { data } = await supabase
+      // Check if user is admin
+      const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', userId)
-        .single();
-      
-      setIsAdmin(data?.is_admin || false);
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      setIsAdmin(false);
-    }
-  };
+        .maybeSingle();
 
-  const handleUserRedirection = async (userId: string) => {
-    try {
-      // Vérifier si l'utilisateur est membre de l'équipe
+      if (profile?.is_admin) {
+        navigate('/admin');
+        return;
+      }
+
+      // Check if user is a seller
+      const { data: seller } = await supabase
+        .from('sellers')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (seller) {
+        navigate('/seller-space');
+        return;
+      }
+
+      // Check if user is a team member
       const { data: teamMember } = await supabase
         .from('team_members')
         .select('id')
         .eq('user_id', userId)
-        .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (teamMember) {
-        // Rediriger vers l'espace équipe
-        setTimeout(() => navigate('/team-space'), 100);
+        navigate('/team-space');
         return;
       }
 
-      // Vérifier si l'utilisateur est vendeur
-      const { data: seller } = await supabase
-        .from('sellers')
-        .select('status')
-        .eq('user_id', userId)
-        .single();
-
-      if (seller && seller.status === 'active') {
-        // Rediriger vers l'espace vendeur
-        setTimeout(() => navigate('/seller-space'), 100);
-        return;
-      }
-
+      // Default redirect to profile if no specific role
+      navigate('/profile');
     } catch (error) {
-      // Ignorer les erreurs - l'utilisateur restera sur la page actuelle
-      console.log('No special redirection needed:', error);
+      console.error('Error during auto-redirect:', error);
     }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setIsAdmin(false);
-    navigate('/');
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const value = {
+    user,
+    session,
+    loading,
+    signOut,
+  };
 
-export const useAuth = () => useContext(AuthContext);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
