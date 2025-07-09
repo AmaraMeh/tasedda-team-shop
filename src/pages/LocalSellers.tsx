@@ -8,7 +8,7 @@ import ProductCard from '@/components/ProductCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Store, Eye, MessageCircle } from 'lucide-react';
+import { MapPin, Store, Eye, MessageCircle, Package } from 'lucide-react';
 
 interface Seller {
   id: string;
@@ -28,11 +28,16 @@ interface Seller {
 interface Product {
   id: string;
   name: string;
+  description: string;
   price: number;
   image_url: string;
+  image: string;
   seller_id: string;
   is_active: boolean;
   stock_quantity: number;
+  category: string;
+  inStock: boolean;
+  is_featured: boolean;
   categories?: {
     name: string;
   };
@@ -93,10 +98,12 @@ const LocalSellers = () => {
       
       const productsWithImages = (data || []).map(product => ({
         ...product,
+        description: product.description || '',
         image_url: product.image_url || '/placeholder.svg',
         image: product.image_url || '/placeholder.svg',
         category: product.categories?.name || 'Sans catégorie',
-        inStock: product.stock_quantity > 0
+        inStock: product.stock_quantity > 0,
+        is_featured: product.is_featured || false
       }));
       
       setProducts(productsWithImages);
@@ -226,7 +233,7 @@ const LocalSellers = () => {
           {((activeTab === 'sellers' && sellers.length === 0) || 
             (activeTab === 'products' && products.length === 0)) && (
             <div className="text-center py-12">
-              <MapPin className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-xl font-semibold text-white mb-2">
                 {activeTab === 'sellers' ? 'Aucun vendeur local' : 'Aucun produit'}
               </h3>

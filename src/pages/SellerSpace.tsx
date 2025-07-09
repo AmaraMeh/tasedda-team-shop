@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Store, Package, TrendingUp, DollarSign, Calendar, Plus, Eye, Users, ShoppingCart } from 'lucide-react';
+import { Store, Package, TrendingUp, DollarSign, Plus, Eye, Users, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Seller {
@@ -128,23 +128,8 @@ const SellerSpace = () => {
 
   const loadOrders = async (sellerId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          total_amount,
-          order_status,
-          created_at,
-          user_id,
-          profiles(full_name, email)
-        `)
-        .eq('seller_id', sellerId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setOrders(data || []);
+      // For now, we'll use a placeholder until we have seller_id in orders table
+      setOrders([]);
     } catch (error) {
       console.error('Error loading orders:', error);
     }
@@ -158,24 +143,14 @@ const SellerSpace = () => {
         .select('*')
         .eq('seller_id', sellerId);
 
-      // Load orders stats
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select('total_amount, order_status')
-        .eq('seller_id', sellerId);
-
       const totalProducts = productsData?.length || 0;
       const activeProducts = productsData?.filter(p => p.is_active)?.length || 0;
-      const totalOrders = ordersData?.length || 0;
-      const totalRevenue = ordersData?.reduce((sum, order) => {
-        return order.order_status === 'delivered' ? sum + order.total_amount : sum;
-      }, 0) || 0;
 
       setStats({
         totalProducts,
         activeProducts,
-        totalOrders,
-        totalRevenue
+        totalOrders: 0,
+        totalRevenue: 0
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -351,48 +326,6 @@ const SellerSpace = () => {
                       <Package className="h-12 w-12 mx-auto mb-4" />
                       <p>Aucun produit pour le moment</p>
                       <p className="text-sm">Ajoutez vos premiers produits pour commencer à vendre !</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Commandes récentes */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <ShoppingCart className="h-5 w-5 mr-2 text-gold" />
-                    Commandes Récentes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {orders.length > 0 ? (
-                    <div className="space-y-4">
-                      {orders.map((order) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
-                          <div>
-                            <p className="font-semibold text-white">#{order.order_number}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {order.profiles?.full_name || 'Client invité'} • {order.total_amount.toLocaleString()} DA
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(order.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <Badge className={
-                            order.order_status === 'delivered' ? 'bg-green-500/20 text-green-400' :
-                            order.order_status === 'shipped' ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-orange-500/20 text-orange-400'
-                          }>
-                            {order.order_status === 'delivered' ? 'Livré' :
-                             order.order_status === 'shipped' ? 'Expédié' : 'En cours'}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <ShoppingCart className="h-12 w-12 mx-auto mb-4" />
-                      <p>Aucune commande pour le moment</p>
                     </div>
                   )}
                 </CardContent>

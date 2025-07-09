@@ -35,6 +35,7 @@ export interface Shop {
   id: string;
   user_id: string;
   name: string;
+  business_name: string;
   slug: string;
   description: string;
   logo_url: string;
@@ -46,6 +47,7 @@ export interface Shop {
   updated_at: string;
   subscription_end_date: string;
   trial_end_date: string;
+  seller_type: 'normal' | 'wholesale' | 'local';
 }
 
 export interface Product {
@@ -63,13 +65,19 @@ export interface Product {
   inStock: boolean;
   is_featured: boolean;
   seller_id?: string;
-  seller_type?: 'normal' | 'wholesale';
+  seller_type?: 'normal' | 'wholesale' | 'local';
   category_id?: string;
   stock_quantity?: number;
   is_active?: boolean;
   show_price?: boolean;
   created_at?: string;
   updated_at?: string;
+  categories?: { name: string };
+  sellers?: {
+    business_name: string;
+    slug: string;
+    seller_type: string;
+  };
 }
 
 export interface Category {
@@ -108,7 +116,7 @@ export interface Seller {
   business_name: string;
   slug: string;
   description: string;
-  seller_type: 'normal' | 'wholesale';
+  seller_type: 'normal' | 'wholesale' | 'local';
   is_active: boolean;
   monthly_fee: number;
   status: 'pending' | 'active' | 'suspended';

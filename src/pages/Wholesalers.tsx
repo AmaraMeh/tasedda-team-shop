@@ -28,11 +28,16 @@ interface Seller {
 interface Product {
   id: string;
   name: string;
+  description: string;
   price: number;
   image_url: string;
+  image: string;
   seller_id: string;
   is_active: boolean;
   stock_quantity: number;
+  category: string;
+  inStock: boolean;
+  is_featured: boolean;
   categories?: {
     name: string;
   };
@@ -93,10 +98,12 @@ const Wholesalers = () => {
       
       const productsWithImages = (data || []).map(product => ({
         ...product,
+        description: product.description || '',
         image_url: product.image_url || '/placeholder.svg',
         image: product.image_url || '/placeholder.svg',
         category: product.categories?.name || 'Sans catégorie',
-        inStock: product.stock_quantity > 0
+        inStock: product.stock_quantity > 0,
+        is_featured: product.is_featured || false
       }));
       
       setProducts(productsWithImages);

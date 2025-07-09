@@ -5,22 +5,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import AdminPanel from './admin/AdminPanel';
 
 const Admin = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       navigate('/auth');
       return;
     }
     
-    if (!isAdmin) {
-      navigate('/');
-      return;
+    // Check if user is admin by checking their profile
+    const checkAdminStatus = async () => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+        
+        if (!profile?.is_admin) {
+          navigate('/');
+          return;
+        }
+      }
+    };
+    
+    if (user) {
+      checkAdminStatus();
     }
-  }, [user, isAdmin, navigate]);
+  }, [user, loading, navigate]);
 
-  if (!user || !isAdmin) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white text-center">
@@ -29,6 +44,10 @@ const Admin = () => {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return <AdminPanel />;

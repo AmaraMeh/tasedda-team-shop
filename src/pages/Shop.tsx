@@ -7,24 +7,24 @@ import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
 import Footer from '@/components/Layout/Footer';
 import Header from '@/components/Layout/Header';
-import { Shop as ShopType, Product } from '@/types';
+import { Seller, Product } from '@/types';
 import { MessageCircle, ExternalLink } from 'lucide-react';
 
 const Shop = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const [shop, setShop] = useState<ShopType | null>(null);
+  const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (slug) {
-      fetchShop();
+      fetchSeller();
       fetchProducts();
     }
   }, [slug]);
 
-  const fetchShop = async () => {
+  const fetchSeller = async () => {
     try {
       const { data, error } = await supabase
         .from('sellers')
@@ -33,19 +33,15 @@ const Shop = () => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching shop:', error);
+        console.error('Error fetching seller:', error);
         return;
       }
 
       if (data) {
-        const typedShop: ShopType = {
-          ...data,
-          subscription_status: data.subscription_status as 'active' | 'trial' | 'expired'
-        };
-        setShop(typedShop);
+        setSeller(data);
       }
     } catch (error) {
-      console.error('Error fetching shop:', error);
+      console.error('Error fetching seller:', error);
     }
   };
 
@@ -75,10 +71,12 @@ const Shop = () => {
       if (data) {
         const productsWithCategory = data.map(item => ({
           ...item,
+          description: item.description || '',
           image_url: item.image_url || '/placeholder.svg',
           image: item.image_url || '/placeholder.svg',
           category: item.categories?.name || 'Sans catégorie',
-          inStock: item.stock_quantity ? item.stock_quantity > 0 : true
+          inStock: item.stock_quantity ? item.stock_quantity > 0 : true,
+          is_featured: item.is_featured || false
         }));
         setProducts(productsWithCategory);
       }
@@ -97,7 +95,7 @@ const Shop = () => {
     );
   }
 
-  if (!shop) {
+  if (!seller) {
     return (
       <div className="min-h-screen bg-black">
         <Header />
@@ -125,23 +123,23 @@ const Shop = () => {
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="flex-1">
               <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-3xl font-bold text-white">{shop.business_name}</h1>
-                <Badge variant={shop.subscription_status === 'active' ? 'default' : 'secondary'}>
-                  {shop.subscription_status === 'active' ? 'Actif' : 
-                   shop.subscription_status === 'trial' ? 'Essai' : 'Expiré'}
+                <h1 className="text-3xl font-bold text-white">{seller.business_name}</h1>
+                <Badge variant={seller.subscription_status === 'active' ? 'default' : 'secondary'}>
+                  {seller.subscription_status === 'active' ? 'Actif' : 
+                   seller.subscription_status === 'trial' ? 'Essai' : 'Expiré'}
                 </Badge>
               </div>
               
-              {shop.description && (
-                <p className="text-muted-foreground mb-4">{shop.description}</p>
+              {seller.description && (
+                <p className="text-muted-foreground mb-4">{seller.description}</p>
               )}
               
               <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
-                <span>/{shop.slug}</span>
+                <span>/{seller.slug}</span>
                 <span>•</span>
                 <span>{products.length} produits</span>
                 <span>•</span>
-                <span>{shop.seller_type === 'wholesale' ? 'Grossiste' : 'Vendeur Local'}</span>
+                <span>{seller.seller_type === 'wholesale' ? 'Grossiste' : 'Vendeur Local'}</span>
               </div>
 
               {/* Contact buttons */}
