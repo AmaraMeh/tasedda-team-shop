@@ -7,7 +7,7 @@ import Footer from '@/components/Layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, Phone, Mail, MessageCircle, Users } from 'lucide-react';
+import { Package, Phone, Mail, MessageCircle, Users, Store } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Seller {
@@ -29,6 +29,7 @@ interface Seller {
     email: string;
     phone: string;
   };
+  product_count?: number;
 }
 
 const Wholesalers = () => {
@@ -55,13 +56,26 @@ const Wholesalers = () => {
       if (error) throw error;
 
       if (data) {
-        const mappedWholesalers = data.map(item => ({
-          ...item,
-          seller_type: item.seller_type as 'normal' | 'wholesale',
-          status: item.status as 'pending' | 'active' | 'suspended',
-          subscription_status: item.subscription_status as 'trial' | 'active' | 'expired'
-        }));
-        setWholesalers(mappedWholesalers);
+        // Compter les produits pour chaque grossiste
+        const wholesalersWithProductCount = await Promise.all(
+          data.map(async (wholesaler) => {
+            const { count } = await supabase
+              .from('products')
+              .select('*', { count: 'exact', head: true })
+              .eq('seller_id', wholesaler.id)
+              .eq('is_active', true);
+            
+            return {
+              ...wholesaler,
+              seller_type: wholesaler.seller_type as 'normal' | 'wholesale',
+              status: wholesaler.status as 'pending' | 'active' | 'suspended',
+              subscription_status: wholesaler.subscription_status as 'trial' | 'active' | 'expired',
+              product_count: count || 0
+            };
+          })
+        );
+
+        setWholesalers(wholesalersWithProductCount);
       }
     } catch (error) {
       console.error('Error fetching wholesalers:', error);
@@ -127,7 +141,7 @@ const Wholesalers = () => {
                     </Badge>
                   </div>
                   
-                  <p className="text-muted-foreground">{wholesaler.description}</p>
+                  <p className="text-muted-foreground text-sm">{wholesaler.description}</p>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center text-muted-foreground">
@@ -141,6 +155,10 @@ const Wholesalers = () => {
                     <div className="flex items-center text-muted-foreground">
                       <Mail className="h-4 w-4 mr-2" />
                       {wholesaler.profiles.email}
+                    </div>
+                    <div className="flex items-center text-muted-foreground">
+                      <Package className="h-4 w-4 mr-2" />
+                      {wholesaler.product_count} produit{wholesaler.product_count !== 1 ? 's' : ''}
                     </div>
                   </div>
 

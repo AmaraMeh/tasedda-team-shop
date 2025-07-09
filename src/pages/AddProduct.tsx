@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Plus, X } from 'lucide-react';
+import { Package, Plus, X, ArrowLeft } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 
 const AddProduct = () => {
@@ -178,17 +179,27 @@ const AddProduct = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-20">
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <Package className="h-12 w-12 text-gold mr-3" />
-              <h1 className="text-3xl font-display font-bold text-white">
-                Ajouter un <span className="gold-text">Produit</span>
-              </h1>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center mb-8">
+            <Button 
+              onClick={() => navigate('/seller-space')} 
+              variant="outline" 
+              className="mr-4 border-gold/20"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour
+            </Button>
+            <div>
+              <div className="flex items-center mb-4">
+                <Package className="h-12 w-12 text-gold mr-3" />
+                <h1 className="text-3xl font-display font-bold text-white">
+                  Ajouter un <span className="gold-text">Produit</span>
+                </h1>
+              </div>
+              <p className="text-muted-foreground">
+                Ajoutez un nouveau produit à votre boutique {seller.seller_type === 'wholesale' ? 'grossiste' : 'locale'}
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              Ajoutez un nouveau produit à votre boutique
-            </p>
           </div>
 
           <Card className="glass-effect border-gold/20">
@@ -198,8 +209,8 @@ const AddProduct = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-white mb-2">
                       Nom du produit *
                     </label>
@@ -208,8 +219,10 @@ const AddProduct = () => {
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Nom du produit"
                       required
+                      className="w-full"
                     />
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
                       Catégorie
@@ -227,6 +240,18 @@ const AddProduct = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Stock
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.stock_quantity}
+                      onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
+                      placeholder="Quantité en stock"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -236,47 +261,36 @@ const AddProduct = () => {
                   <Textarea
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Description du produit"
-                    rows={3}
+                    placeholder="Description détaillée du produit"
+                    rows={4}
                   />
                 </div>
 
                 {/* Pricing */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
-                      Prix (DA) *
+                      Prix de vente (DA) *
                     </label>
                     <Input
                       type="number"
                       step="0.01"
                       value={formData.price}
                       onChange={(e) => handleInputChange('price', e.target.value)}
-                      placeholder="0.00"
+                      placeholder="Prix de vente"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
-                      Prix original (DA)
+                      Prix original (DA) - Optionnel
                     </label>
                     <Input
                       type="number"
                       step="0.01"
                       value={formData.original_price}
                       onChange={(e) => handleInputChange('original_price', e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Stock
-                    </label>
-                    <Input
-                      type="number"
-                      value={formData.stock_quantity}
-                      onChange={(e) => handleInputChange('stock_quantity', e.target.value)}
-                      placeholder="0"
+                      placeholder="Prix avant réduction"
                     />
                   </div>
                 </div>
@@ -284,7 +298,7 @@ const AddProduct = () => {
                 {/* Image */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    URL de l'image
+                    Image du produit
                   </label>
                   <ImageUpload
                     value={formData.image_url}
@@ -292,86 +306,93 @@ const AddProduct = () => {
                   />
                 </div>
 
-                {/* Sizes */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Tailles disponibles
-                  </label>
-                  <div className="flex gap-2 mb-2">
-                    <Input
-                      value={newSize}
-                      onChange={(e) => setNewSize(e.target.value)}
-                      placeholder="Ajouter une taille"
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSize())}
-                    />
-                    <Button type="button" onClick={addSize} className="btn-gold">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {sizes.map((size) => (
-                      <Badge key={size} variant="secondary" className="flex items-center gap-1">
-                        {size}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeSize(size)} />
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Colors */}
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Couleurs disponibles
-                  </label>
-                  <div className="flex gap-2 mb-2">
-                    <Input
-                      value={newColor}
-                      onChange={(e) => setNewColor(e.target.value)}
-                      placeholder="Ajouter une couleur"
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
-                    />
-                    <Button type="button" onClick={addColor} className="btn-gold">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {colors.map((color) => (
-                      <Badge key={color} variant="secondary" className="flex items-center gap-1">
-                        {color}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => removeColor(color)} />
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Switches */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white">
-                      Produit vedette
+                {/* Sizes and Colors */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Tailles disponibles
                     </label>
-                    <Switch
-                      checked={formData.is_featured}
-                      onCheckedChange={(checked) => handleInputChange('is_featured', checked)}
-                    />
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        value={newSize}
+                        onChange={(e) => setNewSize(e.target.value)}
+                        placeholder="Ex: S, M, L, XL"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSize())}
+                      />
+                      <Button type="button" onClick={addSize} className="btn-gold shrink-0">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map((size) => (
+                        <Badge key={size} variant="secondary" className="flex items-center gap-1">
+                          {size}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => removeSize(size)} />
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white">
-                      Produit actif
+
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Couleurs disponibles
                     </label>
-                    <Switch
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => handleInputChange('is_active', checked)}
-                    />
+                    <div className="flex gap-2 mb-3">
+                      <Input
+                        value={newColor}
+                        onChange={(e) => setNewColor(e.target.value)}
+                        placeholder="Ex: Rouge, Bleu, Noir"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
+                      />
+                      <Button type="button" onClick={addColor} className="btn-gold shrink-0">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {colors.map((color) => (
+                        <Badge key={color} variant="secondary" className="flex items-center gap-1">
+                          {color}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => removeColor(color)} />
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                {/* Settings */}
+                <div className="space-y-4 p-4 bg-black/30 rounded-lg">
+                  <h3 className="text-lg font-semibold text-white">Paramètres du produit</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-white">
+                        Produit vedette
+                        <p className="text-xs text-muted-foreground">Afficher en priorité</p>
+                      </label>
+                      <Switch
+                        checked={formData.is_featured}
+                        onCheckedChange={(checked) => handleInputChange('is_featured', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-white">
+                        Produit actif
+                        <p className="text-xs text-muted-foreground">Visible par les clients</p>
+                      </label>
+                      <Switch
+                        checked={formData.is_active}
+                        onCheckedChange={(checked) => handleInputChange('is_active', checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-6">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate('/seller-space')}
-                    className="flex-1"
+                    className="flex-1 border-gold/20"
                   >
                     Annuler
                   </Button>

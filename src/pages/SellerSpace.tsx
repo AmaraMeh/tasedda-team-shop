@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,10 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Store, Package, TrendingUp, DollarSign, Calendar, Plus, Eye } from 'lucide-react';
-import type { User as AuthUser } from '@supabase/supabase-js';
+import { Store, Package, TrendingUp, DollarSign, Calendar, Plus, Eye, Users, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/input';
 
 interface Seller {
   id: string;
@@ -23,22 +22,44 @@ interface Seller {
   is_active: boolean;
   created_at: string;
   status: string;
+  seller_type: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock_quantity: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  total_amount: number;
+  order_status: string;
+  created_at: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  };
 }
 
 const SellerSpace = () => {
   const { user, loading } = useAuth();
   const [seller, setSeller] = useState<Seller | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    activeProducts: 0
   });
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -66,7 +87,11 @@ const SellerSpace = () => {
       }
 
       setSeller(data);
-      await loadStats(data.id);
+      await Promise.all([
+        loadProducts(data.id),
+        loadOrders(data.id),
+        loadStats(data.id)
+      ]);
     } catch (error: any) {
       console.error('Error loading seller data:', error);
       toast({
@@ -79,18 +104,71 @@ const SellerSpace = () => {
     }
   };
 
+  const loadProducts = async (sellerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  };
+
+  const loadOrders = async (sellerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          order_status,
+          created_at,
+          user_id,
+          profiles(full_name, email)
+        `)
+        .eq('seller_id', sellerId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  };
+
   const loadStats = async (sellerId: string) => {
     try {
-      // Charger les statistiques (simulées pour l'instant)
-      const { data: products } = await supabase
+      // Load products stats
+      const { data: productsData } = await supabase
         .from('products')
         .select('*')
         .eq('seller_id', sellerId);
 
+      // Load orders stats
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('total_amount, order_status')
+        .eq('seller_id', sellerId);
+
+      const totalProducts = productsData?.length || 0;
+      const activeProducts = productsData?.filter(p => p.is_active)?.length || 0;
+      const totalOrders = ordersData?.length || 0;
+      const totalRevenue = ordersData?.reduce((sum, order) => {
+        return order.order_status === 'delivered' ? sum + order.total_amount : sum;
+      }, 0) || 0;
+
       setStats({
-        totalProducts: products?.length || 0,
-        totalOrders: 0, // À implémenter
-        totalRevenue: 0 // À implémenter
+        totalProducts,
+        activeProducts,
+        totalOrders,
+        totalRevenue
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -107,52 +185,6 @@ const SellerSpace = () => {
         return { label: 'Expiré', variant: 'destructive' as const, color: 'text-red-500' };
       default:
         return { label: 'Inconnu', variant: 'secondary' as const, color: 'text-gray-500' };
-    }
-  };
-
-  const createSellerSpace = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    if (!fullName || !email || !phone) {
-      toast({ title: 'Veuillez remplir toutes les informations personnelles.' });
-      return;
-    }
-    setDataLoading(true);
-    try {
-      // Vérifier si déjà membre team ou déjà une demande team
-      const { data: teamReq } = await supabase
-        .from('team_join_requests')
-        .select('id, status')
-        .eq('user_id', user.id)
-        .single();
-      const { data: teamMember } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      if (teamReq || teamMember) {
-        toast({
-          title: "Impossible de créer un espace vendeur",
-          description: "Vous avez déjà demandé à rejoindre la team ou vous êtes déjà membre.",
-          variant: "destructive",
-        });
-        setDataLoading(false);
-        return;
-      }
-      // Désactiver le statut team si existant
-      await supabase.from('team_members').update({ is_active: false }).eq('user_id', user.id);
-      // Mettre à jour le profil avec les infos
-      await supabase.from('profiles').update({ full_name: fullName, email, phone }).eq('id', user.id);
-      // Créer l'espace vendeur
-      // ... code existant pour créer la boutique ...
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setDataLoading(false);
     }
   };
 
@@ -229,56 +261,15 @@ const SellerSpace = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contenu principal */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Informations boutique */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Store className="h-5 w-5 mr-2 text-gold" />
-                      Ma Boutique
-                    </div>
-                    <Badge variant={subscriptionInfo.variant}>
-                      {subscriptionInfo.label}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-2xl font-bold gold-text">{seller.business_name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        URL: tasedda.dz/boutique/{seller.slug}
-                      </p>
-                    </div>
-                    
-                    {seller.description && (
-                      <div>
-                        <h4 className="font-semibold mb-2">Description</h4>
-                        <p className="text-muted-foreground">{seller.description}</p>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <Button className="btn-gold">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Voir ma boutique
-                      </Button>
-                      <Button variant="outline" className="border-gold/20">
-                        Modifier
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Statistiques */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="glass-effect border-gold/20" data-aos="fade-up" data-aos-delay="100">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-muted-foreground">Produits</p>
                         <p className="text-2xl font-bold gold-text">{stats.totalProducts}</p>
+                        <p className="text-xs text-muted-foreground">{stats.activeProducts} actifs</p>
                       </div>
                       <Package className="h-8 w-8 text-gold" />
                     </div>
@@ -292,7 +283,7 @@ const SellerSpace = () => {
                         <p className="text-sm text-muted-foreground">Commandes</p>
                         <p className="text-2xl font-bold text-blue-500">{stats.totalOrders}</p>
                       </div>
-                      <TrendingUp className="h-8 w-8 text-blue-500" />
+                      <ShoppingCart className="h-8 w-8 text-blue-500" />
                     </div>
                   </CardContent>
                 </Card>
@@ -310,9 +301,21 @@ const SellerSpace = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                <Card className="glass-effect border-gold/20" data-aos="fade-up" data-aos-delay="400">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Clients</p>
+                        <p className="text-2xl font-bold text-purple-500">{orders.length}</p>
+                      </div>
+                      <Users className="h-8 w-8 text-purple-500" />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Produits */}
+              {/* Produits récents */}
               <Card className="glass-effect border-gold/20" data-aos="fade-up">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -320,24 +323,135 @@ const SellerSpace = () => {
                       <Package className="h-5 w-5 mr-2 text-gold" />
                       Mes Produits
                     </div>
-                    <Button className="btn-gold">
+                    <Button onClick={() => navigate('/add-product')} className="btn-gold">
                       <Plus className="h-4 w-4 mr-2" />
                       Ajouter un produit
                     </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-4" />
-                    <p>Aucun produit pour le moment</p>
-                    <p className="text-sm">Ajoutez vos premiers produits pour commencer à vendre !</p>
-                  </div>
+                  {products.length > 0 ? (
+                    <div className="space-y-4">
+                      {products.slice(0, 5).map((product) => (
+                        <div key={product.id} className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
+                          <div>
+                            <h4 className="font-semibold text-white">{product.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {product.price.toLocaleString()} DA • Stock: {product.stock_quantity}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={product.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                              {product.is_active ? 'Actif' : 'Inactif'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                      {products.length > 5 && (
+                        <div className="text-center pt-4">
+                          <Button variant="outline" className="border-gold/20">
+                            Voir tous les produits ({products.length})
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4" />
+                      <p>Aucun produit pour le moment</p>
+                      <p className="text-sm">Ajoutez vos premiers produits pour commencer à vendre !</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Commandes récentes */}
+              <Card className="glass-effect border-gold/20" data-aos="fade-up">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <ShoppingCart className="h-5 w-5 mr-2 text-gold" />
+                    Commandes Récentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {orders.length > 0 ? (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div key={order.id} className="flex items-center justify-between p-4 bg-black/30 rounded-lg">
+                          <div>
+                            <p className="font-semibold text-white">#{order.order_number}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {order.profiles?.full_name || 'Client invité'} • {order.total_amount.toLocaleString()} DA
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge className={
+                            order.order_status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                            order.order_status === 'shipped' ? 'bg-blue-500/20 text-blue-400' :
+                            'bg-orange-500/20 text-orange-400'
+                          }>
+                            {order.order_status === 'delivered' ? 'Livré' :
+                             order.order_status === 'shipped' ? 'Expédié' : 'En cours'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ShoppingCart className="h-12 w-12 mx-auto mb-4" />
+                      <p>Aucune commande pour le moment</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Informations boutique */}
+              <Card className="glass-effect border-gold/20" data-aos="fade-up">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Store className="h-5 w-5 mr-2 text-gold" />
+                      Ma Boutique
+                    </div>
+                    <Badge variant={subscriptionInfo.variant}>
+                      {subscriptionInfo.label}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-xl font-bold gold-text">{seller.business_name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Type: {seller.seller_type === 'wholesale' ? 'Grossiste' : 'Vendeur Local'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        URL: tasedda.dz/boutique/{seller.slug}
+                      </p>
+                    </div>
+                    
+                    {seller.description && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Description</h4>
+                        <p className="text-muted-foreground text-sm">{seller.description}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <Button className="btn-gold flex-1 mr-2">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Voir ma boutique
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Abonnement */}
               <Card className="glass-effect border-gold/20" data-aos="fade-up">
                 <CardHeader>
@@ -383,7 +497,7 @@ const SellerSpace = () => {
                   <CardTitle>Actions Rapides</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button className="w-full btn-gold">
+                  <Button onClick={() => navigate('/add-product')} className="w-full btn-gold">
                     <Plus className="h-4 w-4 mr-2" />
                     Ajouter un produit
                   </Button>
@@ -400,49 +514,10 @@ const SellerSpace = () => {
                   <Button 
                     variant="outline" 
                     className="w-full border-gold/20"
-                    disabled
                   >
                     <TrendingUp className="h-4 w-4 mr-2" />
                     Statistiques détaillées
                   </Button>
-                </CardContent>
-              </Card>
-
-              {/* Support */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle>Support Vendeur</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Besoin d'aide pour votre boutique ? Notre équipe est là pour vous accompagner.
-                  </p>
-                  <Button variant="outline" className="w-full border-gold/20">
-                    Contacter le support
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Guide vendeur */}
-              <Card className="glass-effect border-gold/20" data-aos="fade-up">
-                <CardHeader>
-                  <CardTitle>Guide du Vendeur</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-start space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-gold text-black flex items-center justify-center text-xs font-bold">1</div>
-                      <p className="text-muted-foreground">Ajoutez vos produits avec des photos de qualité</p>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-gold text-black flex items-center justify-center text-xs font-bold">2</div>
-                      <p className="text-muted-foreground">Définissez des prix compétitifs</p>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-gold text-black flex items-center justify-center text-xs font-bold">3</div>
-                      <p className="text-muted-foreground">Partagez votre boutique sur les réseaux</p>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>

@@ -1,24 +1,21 @@
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Edit, Ban, CheckCircle, Crown, Users, TrendingUp, Star, Plus, Copy } from 'lucide-react';
+import { Users, TrendingUp, DollarSign } from 'lucide-react';
 
 interface TeamMember {
   id: string;
   user_id: string;
   promo_code: string;
   rank: number;
-  is_active: boolean;
   total_sales: number;
-  commission_earned: number;
   total_commissions: number;
   available_commissions: number;
+  is_active: boolean;
   created_at: string;
   profiles: {
     full_name: string;
@@ -28,36 +25,15 @@ interface TeamMember {
 }
 
 const TeamMembers = () => {
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
-  const [newRank, setNewRank] = useState<number>(1);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
   const { toast } = useToast();
 
-  // Statistiques
-  const [stats, setStats] = useState({
-    totalMembers: 0,
-    activeMembers: 0,
-    totalCommissions: 0,
-    pendingCommissions: 0,
-    topPerformer: null as TeamMember | null
-  });
-
   useEffect(() => {
-    fetchMembers();
+    fetchTeamMembers();
   }, []);
 
-  useEffect(() => {
-    filterMembers();
-    calculateStats();
-  }, [members, searchTerm, statusFilter]);
-
-  const fetchMembers = async () => {
+  const fetchTeamMembers = async () => {
     try {
       const { data, error } = await supabase
         .from('team_members')
@@ -68,39 +44,12 @@ const TeamMembers = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      if (data) {
-        // Calculer les commissions en attente et disponibles pour chaque membre
-        const membersWithCommissions = await Promise.all(
-          data.map(async (member) => {
-            const { data: commissions } = await supabase
-              .from('commissions')
-              .select('amount, status')
-              .eq('team_member_id', member.id);
-
-            const pendingCommissions = commissions
-              ?.filter(c => c.status === 'pending')
-              ?.reduce((sum, c) => sum + c.amount, 0) || 0;
-
-            const availableCommissions = commissions
-              ?.filter(c => c.status === 'approved')
-              ?.reduce((sum, c) => sum + c.amount, 0) || 0;
-
-            return {
-              ...member,
-              commission_earned: member.total_commissions || 0,
-              pending_commissions: pendingCommissions,
-              available_commissions: availableCommissions
-            };
-          })
-        );
-
-        setMembers(membersWithCommissions);
-      }
+      setTeamMembers(data || []);
     } catch (error: any) {
+      console.error('Error fetching team members:', error);
       toast({
         title: "Erreur",
-        description: error.message,
+        description: "Impossible de charger les membres de l'équipe",
         variant: "destructive",
       });
     } finally {
@@ -108,99 +57,23 @@ const TeamMembers = () => {
     }
   };
 
-  const filterMembers = () => {
-    let filtered = members;
-
-    if (searchTerm) {
-      filtered = filtered.filter(member =>
-        (member.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-        (member.promo_code?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(member => 
-        statusFilter === 'active' ? member.is_active : !member.is_active
-      );
-    }
-
-    setFilteredMembers(filtered);
-  };
-
-  const calculateStats = () => {
-    const totalMembers = members.length;
-    const activeMembers = members.filter(m => m.is_active).length;
-    const totalCommissions = members.reduce((sum, m) => sum + (m.total_commissions || 0), 0);
-    const pendingCommissions = members.reduce((sum, m) => sum + (m.pending_commissions || 0), 0);
-    const topPerformer = members.reduce((top, member) => 
-      !top || member.total_sales > top.total_sales ? member : top, 
-      null as TeamMember | null
-    );
-
-    setStats({
-      totalMembers,
-      activeMembers,
-      totalCommissions,
-      pendingCommissions,
-      topPerformer
-    });
-  };
-
-  const generateInviteCode = async () => {
-    try {
-      const { data, error } = await supabase.rpc('generate_promo_code');
-      
-      if (error) throw error;
-      
-      const { error: insertError } = await supabase
-        .from('invitation_codes')
-        .insert({
-          code: data,
-          type: 'team',
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      if (insertError) throw insertError;
-
-      setInviteCode(data);
-      toast({
-        title: "Code d'invitation généré",
-        description: `Code: ${data}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copié",
-      description: "Code copié dans le presse-papiers",
-    });
-  };
-
-  const handleStatusChange = async (memberId: string, newStatus: boolean) => {
+  const updateMemberStatus = async (memberId: string, isActive: boolean) => {
     try {
       const { error } = await supabase
         .from('team_members')
-        .update({ is_active: newStatus })
+        .update({ is_active: isActive })
         .eq('id', memberId);
 
       if (error) throw error;
 
       toast({
-        title: "Statut mis à jour",
-        description: `Le membre a été ${newStatus ? 'activé' : 'désactivé'}`,
+        title: "Succès",
+        description: `Membre ${isActive ? 'activé' : 'désactivé'} avec succès`,
       });
 
-      fetchMembers();
+      fetchTeamMembers();
     } catch (error: any) {
+      console.error('Error updating member status:', error);
       toast({
         title: "Erreur",
         description: error.message,
@@ -209,48 +82,23 @@ const TeamMembers = () => {
     }
   };
 
-  const approveCommissions = async (memberId: string) => {
-    try {
-      const { error } = await supabase
-        .from('commissions')
-        .update({ status: 'approved' })
-        .eq('team_member_id', memberId)
-        .eq('status', 'pending');
-
-      if (error) throw error;
-
-      toast({
-        title: "Commissions approuvées",
-        description: "Les commissions en attente ont été approuvées",
-      });
-
-      fetchMembers();
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRankUpdate = async (memberId: string, rank: number) => {
+  const updateMemberRank = async (memberId: string, newRank: number) => {
     try {
       const { error } = await supabase
         .from('team_members')
-        .update({ rank })
+        .update({ rank: newRank })
         .eq('id', memberId);
 
       if (error) throw error;
 
       toast({
-        title: "Rang mis à jour",
-        description: `Le rang du membre a été mis à jour au niveau ${rank}`,
+        title: "Succès",
+        description: "Rang mis à jour avec succès",
       });
 
-      setEditingMember(null);
-      fetchMembers();
+      fetchTeamMembers();
     } catch (error: any) {
+      console.error('Error updating member rank:', error);
       toast({
         title: "Erreur",
         description: error.message,
@@ -272,220 +120,114 @@ const TeamMembers = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Gestion des Membres de la Team</h1>
-        <Button onClick={() => setShowInviteModal(true)} className="btn-gold">
-          <Plus className="h-4 w-4 mr-2" />
-          Générer Code d'Invitation
-        </Button>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Users className="h-6 w-6 text-gold" />
+          <h2 className="text-2xl font-bold text-white">Membres de l'Équipe</h2>
+        </div>
+        <Badge variant="secondary">
+          {teamMembers.length} membres
+        </Badge>
       </div>
 
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="glass-effect border-blue-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-8 w-8 text-blue-400" />
-              <div>
-                <p className="text-2xl font-bold text-blue-400">{stats.totalMembers}</p>
-                <p className="text-sm text-muted-foreground">Total Membres</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-effect border-green-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-8 w-8 text-green-400" />
-              <div>
-                <p className="text-2xl font-bold text-green-400">{stats.activeMembers}</p>
-                <p className="text-sm text-muted-foreground">Membres Actifs</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-effect border-gold/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-8 w-8 text-gold" />
-              <div>
-                <p className="text-2xl font-bold gold-text">{stats.totalCommissions.toLocaleString()} DA</p>
-                <p className="text-sm text-muted-foreground">Total Commissions</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-effect border-orange-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Crown className="h-8 w-8 text-orange-400" />
-              <div>
-                <p className="text-2xl font-bold text-orange-400">{stats.pendingCommissions.toLocaleString()} DA</p>
-                <p className="text-sm text-muted-foreground">En Attente</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-effect border-purple-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Star className="h-8 w-8 text-purple-400" />
-              <div>
-                <p className="text-sm font-bold text-purple-400">
-                  {stats.topPerformer && stats.topPerformer.profiles?.full_name ? stats.topPerformer.profiles.full_name : 'N/A'}
-                </p>
-                <p className="text-xs text-muted-foreground">Top Performer</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtres */}
-      <Card className="glass-effect border-gold/20">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Label htmlFor="search">Rechercher</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Nom, email ou code promo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <div className="w-full md:w-48">
-              <Label>Statut</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="active">Actifs</SelectItem>
-                  <SelectItem value="inactive">Inactifs</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Liste des membres */}
-      <div className="grid gap-4">
-        {filteredMembers.map((member) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {teamMembers.map((member) => {
           const rankInfo = getRankInfo(member.rank);
+          
           return (
             <Card key={member.id} className="glass-effect border-gold/20">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <h3 className="font-semibold text-lg">{member.profiles?.full_name || 'N/A'}</h3>
-                      <Badge className={`${member.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {member.is_active ? 'Actif' : 'Inactif'}
-                      </Badge>
-                      <Badge className="bg-gold/20 text-gold">
-                        {rankInfo.icon} {rankInfo.title}
-                      </Badge>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl">{rankInfo.icon}</span>
+                    <div>
+                      <p className="text-lg font-semibold text-white">
+                        {member.profiles?.full_name || 'Utilisateur inconnu'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {rankInfo.title}
+                      </p>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Email</p>
-                        <p>{member.profiles?.email || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Téléphone</p>
-                        <p>{member.profiles?.phone || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Code Promo</p>
-                        <div className="flex items-center gap-2">
-                          <p className="font-mono text-gold">{member.promo_code}</p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyToClipboard(member.promo_code)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Ventes Totales</p>
-                        <p className="font-semibold">{member.total_sales}</p>
-                      </div>
-                    </div>
+                  </div>
+                  <Badge className={member.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}>
+                    {member.is_active ? 'Actif' : 'Inactif'}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Email:</span>
+                    <span className="text-sm text-white">{member.profiles?.email || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Téléphone:</span>
+                    <span className="text-sm text-white">{member.profiles?.phone || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Code Promo:</span>
+                    <Badge variant="outline" className="font-mono text-gold">
+                      {member.promo_code}
+                    </Badge>
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-4 p-3 bg-black/30 rounded-lg">
-                      <div>
-                        <p className="text-muted-foreground">Commissions en attente</p>
-                        <p className="font-semibold text-orange-400">{(member.pending_commissions || 0).toLocaleString()} DA</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Commissions disponibles</p>
-                        <p className="font-semibold text-green-400">{(member.available_commissions || 0).toLocaleString()} DA</p>
-                      </div>
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Membre depuis le {new Date(member.created_at).toLocaleDateString()}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-black/30 rounded-lg">
+                    <TrendingUp className="h-4 w-4 mx-auto text-blue-400 mb-1" />
+                    <p className="text-lg font-bold text-blue-400">{member.total_sales}</p>
+                    <p className="text-xs text-muted-foreground">Ventes</p>
+                  </div>
+                  <div className="text-center p-3 bg-black/30 rounded-lg">
+                    <DollarSign className="h-4 w-4 mx-auto text-green-400 mb-1" />
+                    <p className="text-lg font-bold text-green-400">
+                      {member.total_commissions.toLocaleString()} DA
                     </p>
+                    <p className="text-xs text-muted-foreground">Commissions</p>
                   </div>
-                  
-                  <div className="flex flex-col space-y-2">
-                    {member.pending_commissions > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={() => approveCommissions(member.id)}
-                        className="bg-green-500 hover:bg-green-600"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Approuver Commissions
-                      </Button>
-                    )}
-                    
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingMember(member);
-                        setNewRank(member.rank);
-                      }}
-                      className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                </div>
+
+                <div className="text-center p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Disponible</p>
+                  <p className="text-xl font-bold text-green-400">
+                    {member.available_commissions.toLocaleString()} DA
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Rang:</span>
+                    <select
+                      value={member.rank}
+                      onChange={(e) => updateMemberRank(member.id, parseInt(e.target.value))}
+                      className="bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm"
                     >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Modifier Rang
-                    </Button>
-                    
-                    <Button
-                      size="sm"
-                      variant={member.is_active ? "destructive" : "default"}
-                      onClick={() => handleStatusChange(member.id, !member.is_active)}
-                      className={member.is_active ? "" : "bg-green-500 hover:bg-green-600"}
-                    >
-                      {member.is_active ? <Ban className="h-4 w-4 mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-                      {member.is_active ? 'Désactiver' : 'Activer'}
-                    </Button>
+                      {[1, 2, 3, 4, 5].map(rank => {
+                        const info = getRankInfo(rank);
+                        return (
+                          <option key={rank} value={rank}>
+                            {info.title} ({info.commission}%)
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
+
+                  <Button
+                    onClick={() => updateMemberStatus(member.id, !member.is_active)}
+                    className={member.is_active ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"}
+                    size="sm"
+                  >
+                    {member.is_active ? 'Désactiver' : 'Activer'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -493,107 +235,10 @@ const TeamMembers = () => {
         })}
       </div>
 
-      {filteredMembers.length === 0 && (
-        <Card className="glass-effect border-gold/20">
-          <CardContent className="p-8 text-center">
-            <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Aucun membre trouvé.</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Modal de génération de code d'invitation */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4 glass-effect border-gold/20">
-            <CardHeader>
-              <CardTitle>Générer un Code d'Invitation Team</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Button onClick={generateInviteCode} className="w-full btn-gold">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Générer un nouveau code
-                </Button>
-              </div>
-              
-              {inviteCode && (
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-sm text-green-400 mb-2">Code généré:</p>
-                  <div className="flex items-center justify-between">
-                    <code className="text-lg font-bold text-gold">{inviteCode}</code>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyToClipboard(inviteCode)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowInviteModal(false)}
-                  className="border-gold/20 flex-1"
-                >
-                  Fermer
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Modal de modification du rang */}
-      {editingMember && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md mx-4 glass-effect border-gold/20">
-            <CardHeader>
-              <CardTitle>Modifier le rang de {editingMember?.profiles?.full_name || 'N/A'}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Nouveau rang (1-5)</Label>
-                <Select 
-                  value={newRank.toString()} 
-                  onValueChange={(value) => setNewRank(parseInt(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5].map(rank => {
-                      const info = getRankInfo(rank);
-                      return (
-                        <SelectItem key={rank} value={rank.toString()}>
-                          {info.icon} Rang {rank} - {info.title} ({info.commission}%)
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button
-                  onClick={() => handleRankUpdate(editingMember.id, newRank)}
-                  className="btn-gold flex-1"
-                >
-                  Confirmer
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setEditingMember(null)}
-                  className="border-gold/20"
-                >
-                  Annuler
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      {teamMembers.length === 0 && (
+        <div className="text-center py-12">
+          <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Aucun membre d'équipe trouvé</p>
         </div>
       )}
     </div>

@@ -29,6 +29,7 @@ interface Seller {
     email: string;
     phone: string;
   };
+  product_count?: number;
 }
 
 const LocalSellers = () => {
@@ -55,13 +56,26 @@ const LocalSellers = () => {
       if (error) throw error;
 
       if (data) {
-        const mappedSellers = data.map(item => ({
-          ...item,
-          seller_type: item.seller_type as 'normal' | 'wholesale',
-          status: item.status as 'pending' | 'active' | 'suspended',
-          subscription_status: item.subscription_status as 'trial' | 'active' | 'expired'
-        }));
-        setSellers(mappedSellers);
+        // Compter les produits pour chaque vendeur
+        const sellersWithProductCount = await Promise.all(
+          data.map(async (seller) => {
+            const { count } = await supabase
+              .from('products')
+              .select('*', { count: 'exact', head: true })
+              .eq('seller_id', seller.id)
+              .eq('is_active', true);
+            
+            return {
+              ...seller,
+              seller_type: seller.seller_type as 'normal' | 'wholesale',
+              status: seller.status as 'pending' | 'active' | 'suspended',
+              subscription_status: seller.subscription_status as 'trial' | 'active' | 'expired',
+              product_count: count || 0
+            };
+          })
+        );
+
+        setSellers(sellersWithProductCount);
       }
     } catch (error) {
       console.error('Error fetching sellers:', error);
@@ -98,10 +112,10 @@ const LocalSellers = () => {
       <main className="container mx-auto px-4 py-20">
         <div className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl font-bold mb-4">
-            {t('localSellers.title')} <span className="gold-text">Locaux</span>
+            Vendeurs <span className="gold-text">Locaux</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            {t('localSellers.description')}
+            Découvrez nos vendeurs locaux et leurs produits authentiques
           </p>
         </div>
 
@@ -118,7 +132,7 @@ const LocalSellers = () => {
                     </Badge>
                   </div>
                   
-                  <p className="text-muted-foreground">{seller.description}</p>
+                  <p className="text-muted-foreground text-sm">{seller.description}</p>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center text-muted-foreground">
@@ -132,6 +146,10 @@ const LocalSellers = () => {
                     <div className="flex items-center text-muted-foreground">
                       <Mail className="h-4 w-4 mr-2" />
                       {seller.profiles.email}
+                    </div>
+                    <div className="flex items-center text-muted-foreground">
+                      <Store className="h-4 w-4 mr-2" />
+                      {seller.product_count} produit{seller.product_count !== 1 ? 's' : ''}
                     </div>
                   </div>
 
