@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +45,7 @@ const Index = () => {
         .select(`
           *,
           categories(name),
-          sellers(business_name, seller_type)
+          sellers(business_name, slug, seller_type)
         `)
         .not('seller_id', 'is', null)
         .eq('is_active', true)
@@ -57,7 +58,7 @@ const Index = () => {
         .select(`
           *,
           categories(name),
-          sellers(business_name, seller_type)
+          sellers(business_name, slug, seller_type)
         `)
         .not('seller_id', 'is', null)
         .eq('is_active', true)
@@ -70,7 +71,11 @@ const Index = () => {
           image_url: item.image_url || '/placeholder.svg',
           image: item.image_url || '/placeholder.svg',
           category: item.categories?.name || 'Sans catégorie',
-          inStock: item.stock_quantity > 0
+          inStock: item.stock_quantity ? item.stock_quantity > 0 : true,
+          description: item.description || '',
+          is_featured: item.is_featured || false,
+          sizes: item.sizes || [],
+          colors: item.colors || []
         }));
         setTaseddaProducts(mappedAdminProducts);
       }
@@ -81,7 +86,16 @@ const Index = () => {
           image_url: item.image_url || '/placeholder.svg',
           image: item.image_url || '/placeholder.svg',
           category: item.categories?.name || 'Sans catégorie',
-          inStock: item.stock_quantity > 0
+          inStock: item.stock_quantity ? item.stock_quantity > 0 : true,
+          description: item.description || '',
+          is_featured: item.is_featured || false,
+          sizes: item.sizes || [],
+          colors: item.colors || [],
+          sellers: item.sellers ? {
+            business_name: item.sellers.business_name,
+            slug: item.sellers.slug,
+            seller_type: item.sellers.seller_type as 'normal' | 'wholesale' | 'local'
+          } : undefined
         }));
         setSellerProducts(mappedVendorProducts);
       }
@@ -92,7 +106,16 @@ const Index = () => {
           image_url: item.image_url || '/placeholder.svg',
           image: item.image_url || '/placeholder.svg',
           category: item.categories?.name || 'Sans catégorie',
-          inStock: item.stock_quantity > 0
+          inStock: item.stock_quantity ? item.stock_quantity > 0 : true,
+          description: item.description || '',
+          is_featured: item.is_featured || false,
+          sizes: item.sizes || [],
+          colors: item.colors || [],
+          sellers: item.sellers ? {
+            business_name: item.sellers.business_name,
+            slug: item.sellers.slug,
+            seller_type: item.sellers.seller_type as 'normal' | 'wholesale' | 'local'
+          } : undefined
         }));
         setWholesalerProducts(mappedWholesaleProducts);
       }

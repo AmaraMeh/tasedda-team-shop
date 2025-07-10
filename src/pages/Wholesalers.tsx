@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Store, Eye, MessageCircle, Package } from 'lucide-react';
+import { Product } from '@/types';
 
 interface Seller {
   id: string;
@@ -22,28 +23,6 @@ interface Seller {
     full_name: string;
     city: string;
     wilaya: string;
-  };
-}
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  image: string;
-  seller_id: string;
-  is_active: boolean;
-  stock_quantity: number;
-  category: string;
-  inStock: boolean;
-  is_featured: boolean;
-  categories?: {
-    name: string;
-  };
-  sellers?: {
-    business_name: string;
-    slug: string;
   };
 }
 
@@ -69,7 +48,7 @@ const Wholesalers = () => {
         `)
         .eq('seller_type', 'wholesale')
         .eq('is_active', true)
-        .eq('status', 'approved')
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -90,7 +69,7 @@ const Wholesalers = () => {
         `)
         .eq('sellers.seller_type', 'wholesale')
         .eq('sellers.is_active', true)
-        .eq('sellers.status', 'approved')
+        .eq('sellers.status', 'active')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -102,15 +81,15 @@ const Wholesalers = () => {
         image_url: product.image_url || '/placeholder.svg',
         image: product.image_url || '/placeholder.svg',
         category: product.categories?.name || 'Sans catégorie',
-        inStock: product.stock_quantity > 0,
+        inStock: product.stock_quantity ? product.stock_quantity > 0 : true,
         is_featured: product.is_featured || false,
         sizes: product.sizes || [],
         colors: product.colors || [],
-        sellers: {
+        sellers: product.sellers ? {
           business_name: product.sellers.business_name,
           slug: product.sellers.slug,
-          seller_type: product.sellers.seller_type
-        }
+          seller_type: product.sellers.seller_type as 'normal' | 'wholesale' | 'local'
+        } : undefined
       }));
       
       setProducts(productsWithImages);

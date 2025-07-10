@@ -41,7 +41,13 @@ const Shop = () => {
       }
 
       if (data) {
-        setSeller(data);
+        const sellerData: Seller = {
+          ...data,
+          seller_type: data.seller_type as 'normal' | 'wholesale' | 'local',
+          status: data.status as 'pending' | 'active' | 'suspended',
+          subscription_status: data.subscription_status as 'trial' | 'active' | 'expired'
+        };
+        setSeller(sellerData);
       }
     } catch (error) {
       console.error('Error fetching seller:', error);

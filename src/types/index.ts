@@ -76,7 +76,7 @@ export interface Product {
   sellers?: {
     business_name: string;
     slug: string;
-    seller_type: string;
+    seller_type: 'normal' | 'wholesale' | 'local';
   };
 }
 
