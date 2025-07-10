@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -94,7 +93,7 @@ const Index = () => {
           sellers: item.sellers ? {
             business_name: item.sellers.business_name,
             slug: item.sellers.slug,
-            seller_type: item.sellers.seller_type as 'normal' | 'wholesale' | 'local'
+            seller_type: (item.sellers.seller_type || 'normal') as 'normal' | 'wholesale' | 'local'
           } : undefined
         }));
         setSellerProducts(mappedVendorProducts);
@@ -114,7 +113,7 @@ const Index = () => {
           sellers: item.sellers ? {
             business_name: item.sellers.business_name,
             slug: item.sellers.slug,
-            seller_type: item.sellers.seller_type as 'normal' | 'wholesale' | 'local'
+            seller_type: (item.sellers.seller_type || 'wholesale') as 'normal' | 'wholesale' | 'local'
           } : undefined
         }));
         setWholesalerProducts(mappedWholesaleProducts);
@@ -152,7 +151,7 @@ const Index = () => {
         sellers: product.sellers ? {
           business_name: product.sellers.business_name,
           slug: product.sellers.slug,
-          seller_type: product.sellers.seller_type
+          seller_type: (product.sellers.seller_type || 'normal') as 'normal' | 'wholesale' | 'local'
         } : undefined
       }));
 
@@ -190,7 +189,7 @@ const Index = () => {
         sellers: product.sellers ? {
           business_name: product.sellers.business_name,
           slug: product.sellers.slug,
-          seller_type: product.sellers.seller_type
+          seller_type: (product.sellers.seller_type || 'normal') as 'normal' | 'wholesale' | 'local'
         } : undefined
       }));
 
