@@ -103,7 +103,14 @@ const Wholesalers = () => {
         image: product.image_url || '/placeholder.svg',
         category: product.categories?.name || 'Sans catégorie',
         inStock: product.stock_quantity > 0,
-        is_featured: product.is_featured || false
+        is_featured: product.is_featured || false,
+        sizes: product.sizes || [],
+        colors: product.colors || [],
+        sellers: {
+          business_name: product.sellers.business_name,
+          slug: product.sellers.slug,
+          seller_type: product.sellers.seller_type
+        }
       }));
       
       setProducts(productsWithImages);

@@ -28,7 +28,10 @@ const Shop = () => {
     try {
       const { data, error } = await supabase
         .from('sellers')
-        .select('*')
+        .select(`
+          *,
+          profiles(full_name, email, phone)
+        `)
         .eq('slug', slug)
         .maybeSingle();
 
@@ -76,7 +79,9 @@ const Shop = () => {
           image: item.image_url || '/placeholder.svg',
           category: item.categories?.name || 'Sans catégorie',
           inStock: item.stock_quantity ? item.stock_quantity > 0 : true,
-          is_featured: item.is_featured || false
+          is_featured: item.is_featured || false,
+          sizes: item.sizes || [],
+          colors: item.colors || []
         }));
         setProducts(productsWithCategory);
       }

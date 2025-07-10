@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +18,8 @@ const Index = () => {
   const [taseddaProducts, setTaseddaProducts] = useState<Product[]>([]);
   const [sellerProducts, setSellerProducts] = useState<Product[]>([]);
   const [wholesalerProducts, setWholesalerProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [latestProducts, setLatestProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     fetchProducts();
@@ -97,6 +98,82 @@ const Index = () => {
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+    }
+  };
+
+  const fetchFeaturedProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          sellers(business_name, slug, seller_type)
+        `)
+        .eq('is_featured', true)
+        .eq('is_active', true)
+        .limit(8);
+
+      if (error) throw error;
+
+      const productsWithImages = (data || []).map(product => ({
+        ...product,
+        description: product.description || '',
+        image_url: product.image_url || '/placeholder.svg',
+        image: product.image_url || '/placeholder.svg',
+        category: product.categories?.name || 'Sans catégorie',
+        inStock: product.stock_quantity > 0,
+        is_featured: product.is_featured || false,
+        sizes: product.sizes || [],
+        colors: product.colors || [],
+        sellers: product.sellers ? {
+          business_name: product.sellers.business_name,
+          slug: product.sellers.slug,
+          seller_type: product.sellers.seller_type
+        } : undefined
+      }));
+
+      setFeaturedProducts(productsWithImages);
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+    }
+  };
+
+  const fetchLatestProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name),
+          sellers(business_name, slug, seller_type)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+      if (error) throw error;
+
+      const productsWithImages = (data || []).map(product => ({
+        ...product,
+        description: product.description || '',
+        image_url: product.image_url || '/placeholder.svg',
+        image: product.image_url || '/placeholder.svg',
+        category: product.categories?.name || 'Sans catégorie',
+        inStock: product.stock_quantity > 0,
+        is_featured: product.is_featured || false,
+        sizes: product.sizes || [],
+        colors: product.colors || [],
+        sellers: product.sellers ? {
+          business_name: product.sellers.business_name,
+          slug: product.sellers.slug,
+          seller_type: product.sellers.seller_type
+        } : undefined
+      }));
+
+      setLatestProducts(productsWithImages);
+    } catch (error) {
+      console.error('Error fetching latest products:', error);
     }
   };
 
